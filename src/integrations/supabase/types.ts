@@ -197,6 +197,87 @@ export type Database = {
           },
         ]
       }
+      activation_history: {
+        Row: {
+          activated_at: string | null
+          company_id: string | null
+          id: string
+          key_id: string | null
+          new_account_type: string | null
+          previous_account_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          company_id?: string | null
+          id?: string
+          key_id?: string | null
+          new_account_type?: string | null
+          previous_account_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          company_id?: string | null
+          id?: string
+          key_id?: string | null
+          new_account_type?: string | null
+          previous_account_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activation_history_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "activation_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activation_keys: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          current_uses: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          key_type: string
+          max_uses: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          key_type?: string
+          max_uses?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          key_type?: string
+          max_uses?: number | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null
@@ -1629,6 +1710,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_account_with_key: {
+        Args: { activation_key: string }
+        Returns: Json
+      }
       get_user_company_id: {
         Args: Record<PropertyKey, never>
         Returns: string
