@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Mail, Lock, User, Phone } from "lucide-react";
+
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string().email("Email invalide").max(255, "Email trop long"),
+  password: z.string().min(1, "Mot de passe requis"),
+});
+
+const signupSchema = z.object({
+  email: z.string().email("Email invalide").max(255, "Email trop long"),
+  password: z.string()
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre"),
+  fullName: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(100, "Le nom est trop long"),
+  companyName: z.string().trim().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères").max(100, "Le nom de l'entreprise est trop long").optional().or(z.literal("")),
+  phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Numéro de téléphone invalide").optional().or(z.literal("")),
+});
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -30,9 +48,25 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Validate input
+      const result = loginSchema.safeParse({
         email: loginEmail,
         password: loginPassword,
+      });
+
+      if (!result.success) {
+        toast({
+          title: "Données invalides",
+          description: result.error.issues[0].message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: result.data.email,
+        password: result.data.password,
       });
 
       if (error) throw error;
@@ -80,14 +114,33 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Validate input
+      const result = signupSchema.safeParse({
         email: signupEmail,
         password: signupPassword,
+        fullName: fullName,
+        companyName: companyName || "",
+        phone: phone || "",
+      });
+
+      if (!result.success) {
+        toast({
+          title: "Données invalides",
+          description: result.error.issues[0].message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: result.data.email,
+        password: result.data.password,
         options: {
           data: {
-            full_name: fullName,
-            company_name: companyName,
-            phone: phone,
+            full_name: result.data.fullName,
+            company_name: result.data.companyName || result.data.fullName + "'s Company",
+            phone: result.data.phone,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -190,7 +243,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-company">Entreprise</Label>
+                  <Label htmlFor="signup-company">Entreprise *</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -200,6 +253,7 @@ export default function Auth() {
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       className="pl-10"
+                      required
                     />
                   </div>
                 </div>
@@ -244,9 +298,12 @@ export default function Auth() {
                       onChange={(e) => setSignupPassword(e.target.value)}
                       className="pl-10"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Min 8 caractères, 1 majuscule, 1 chiffre
+                  </p>
                 </div>
                 <div className="bg-accent/20 p-3 rounded-lg text-sm">
                   <p className="text-muted-foreground">

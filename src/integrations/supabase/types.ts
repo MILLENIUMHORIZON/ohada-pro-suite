@@ -90,6 +90,7 @@ export type Database = {
       }
       account_moves: {
         Row: {
+          company_id: string
           created_at: string | null
           date: string
           id: string
@@ -101,6 +102,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id: string
           created_at?: string | null
           date?: string
           id?: string
@@ -112,6 +114,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string
           created_at?: string | null
           date?: string
           id?: string
@@ -123,6 +126,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "account_moves_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "account_moves_journal_id_fkey"
             columns: ["journal_id"]
@@ -142,6 +152,7 @@ export type Database = {
       accounts: {
         Row: {
           code: string
+          company_id: string
           created_at: string | null
           id: string
           name: string
@@ -151,6 +162,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
@@ -160,6 +172,7 @@ export type Database = {
         }
         Update: {
           code?: string
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
@@ -168,6 +181,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["account_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_parent_id_fkey"
             columns: ["parent_id"]
@@ -478,6 +498,7 @@ export type Database = {
       journals: {
         Row: {
           code: string
+          company_id: string
           created_at: string | null
           default_credit_account_id: string | null
           default_debit_account_id: string | null
@@ -487,6 +508,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          company_id: string
           created_at?: string | null
           default_credit_account_id?: string | null
           default_debit_account_id?: string | null
@@ -496,6 +518,7 @@ export type Database = {
         }
         Update: {
           code?: string
+          company_id?: string
           created_at?: string | null
           default_credit_account_id?: string | null
           default_debit_account_id?: string | null
@@ -504,6 +527,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["journal_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "journals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "journals_default_credit_account_id_fkey"
             columns: ["default_credit_account_id"]
@@ -633,6 +663,7 @@ export type Database = {
       periods: {
         Row: {
           closed: boolean | null
+          company_id: string
           created_at: string | null
           date_end: string
           date_start: string
@@ -641,6 +672,7 @@ export type Database = {
         }
         Insert: {
           closed?: boolean | null
+          company_id: string
           created_at?: string | null
           date_end: string
           date_start: string
@@ -649,13 +681,22 @@ export type Database = {
         }
         Update: {
           closed?: boolean | null
+          company_id?: string
           created_at?: string | null
           date_end?: string
           date_start?: string
           id?: string
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       procurements: {
         Row: {
