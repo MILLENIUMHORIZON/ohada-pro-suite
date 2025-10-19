@@ -311,27 +311,39 @@ export type Database = {
       }
       crm_pipelines: {
         Row: {
+          company_id: string
           created_at: string | null
           description: string | null
           id: string
           name: string
         }
         Insert: {
+          company_id: string
           created_at?: string | null
           description?: string | null
           id?: string
           name: string
         }
         Update: {
+          company_id?: string
           created_at?: string | null
           description?: string | null
           id?: string
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipelines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_stages: {
         Row: {
+          company_id: string
           created_at: string | null
           id: string
           name: string
@@ -340,6 +352,7 @@ export type Database = {
           won_flag: boolean | null
         }
         Insert: {
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
@@ -348,6 +361,7 @@ export type Database = {
           won_flag?: boolean | null
         }
         Update: {
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
@@ -356,6 +370,13 @@ export type Database = {
           won_flag?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_stages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_stages_pipeline_id_fkey"
             columns: ["pipeline_id"]
@@ -773,24 +794,34 @@ export type Database = {
       }
       product_categories: {
         Row: {
+          company_id: string
           created_at: string | null
           id: string
           name: string
           parent_id: string | null
         }
         Insert: {
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
           parent_id?: string | null
         }
         Update: {
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
           parent_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_categories_parent_id_fkey"
             columns: ["parent_id"]
@@ -1174,6 +1205,7 @@ export type Database = {
       sequences: {
         Row: {
           code: string
+          company_id: string
           created_at: string | null
           current: number | null
           id: string
@@ -1182,6 +1214,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          company_id: string
           created_at?: string | null
           current?: number | null
           id?: string
@@ -1190,13 +1223,22 @@ export type Database = {
         }
         Update: {
           code?: string
+          company_id?: string
           created_at?: string | null
           current?: number | null
           id?: string
           padding?: number | null
           prefix?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_inventories: {
         Row: {
@@ -1309,6 +1351,7 @@ export type Database = {
       }
       stock_locations: {
         Row: {
+          company_id: string
           created_at: string | null
           id: string
           name: string
@@ -1316,6 +1359,7 @@ export type Database = {
           type: Database["public"]["Enums"]["location_type"]
         }
         Insert: {
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
@@ -1323,6 +1367,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["location_type"]
         }
         Update: {
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
@@ -1330,6 +1375,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["location_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_locations_parent_id_fkey"
             columns: ["parent_id"]
@@ -1341,6 +1393,7 @@ export type Database = {
       }
       stock_moves: {
         Row: {
+          company_id: string
           cost: number | null
           created_at: string | null
           date: string
@@ -1356,6 +1409,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id: string
           cost?: number | null
           created_at?: string | null
           date?: string
@@ -1371,6 +1425,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string
           cost?: number | null
           created_at?: string | null
           date?: string
@@ -1386,6 +1441,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_moves_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_moves_from_location_id_fkey"
             columns: ["from_location_id"]
@@ -1418,6 +1480,7 @@ export type Database = {
       }
       stock_quants: {
         Row: {
+          company_id: string
           cost: number | null
           id: string
           location_id: string
@@ -1426,6 +1489,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id: string
           cost?: number | null
           id?: string
           location_id: string
@@ -1434,6 +1498,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string
           cost?: number | null
           id?: string
           location_id?: string
@@ -1442,6 +1507,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_quants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_quants_location_id_fkey"
             columns: ["location_id"]
@@ -1462,6 +1534,7 @@ export type Database = {
         Row: {
           account_collected_id: string | null
           account_deductible_id: string | null
+          company_id: string
           created_at: string | null
           id: string
           name: string
@@ -1470,6 +1543,7 @@ export type Database = {
         Insert: {
           account_collected_id?: string | null
           account_deductible_id?: string | null
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
@@ -1478,16 +1552,26 @@ export type Database = {
         Update: {
           account_collected_id?: string | null
           account_deductible_id?: string | null
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
           rate?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "taxes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       uom: {
         Row: {
           code: string
+          company_id: string
           created_at: string | null
           id: string
           name: string
@@ -1495,6 +1579,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          company_id: string
           created_at?: string | null
           id?: string
           name: string
@@ -1502,12 +1587,21 @@ export type Database = {
         }
         Update: {
           code?: string
+          company_id?: string
           created_at?: string | null
           id?: string
           name?: string
           ratio?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "uom_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
