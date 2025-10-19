@@ -647,6 +647,69 @@ export type Database = {
         }
         Relationships: []
       }
+      procurements: {
+        Row: {
+          created_at: string | null
+          date_needed: string
+          id: string
+          notes: string | null
+          number: string
+          priority: string | null
+          product_id: string
+          qty_needed: number
+          qty_ordered: number | null
+          qty_received: number | null
+          status: string | null
+          supplier_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_needed: string
+          id?: string
+          notes?: string | null
+          number: string
+          priority?: string | null
+          product_id: string
+          qty_needed: number
+          qty_ordered?: number | null
+          qty_received?: number | null
+          status?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_needed?: string
+          id?: string
+          notes?: string | null
+          number?: string
+          priority?: string | null
+          product_id?: string
+          qty_needed?: number
+          qty_ordered?: number | null
+          qty_received?: number | null
+          status?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string | null
@@ -745,6 +808,162 @@ export type Database = {
             columns: ["uom_id"]
             isOneToOne: false
             referencedRelation: "uom"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_type: string | null
+          company_name: string | null
+          created_at: string | null
+          expires_at: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_type?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_type?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proforma_lines: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          product_id: string
+          proforma_id: string | null
+          qty: number
+          subtotal: number | null
+          tax_id: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          product_id: string
+          proforma_id?: string | null
+          qty?: number
+          subtotal?: number | null
+          tax_id?: string | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          product_id?: string
+          proforma_id?: string | null
+          qty?: number
+          subtotal?: number | null
+          tax_id?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proforma_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_lines_proforma_id_fkey"
+            columns: ["proforma_id"]
+            isOneToOne: false
+            referencedRelation: "proformas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_lines_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proformas: {
+        Row: {
+          converted_to_order_id: string | null
+          created_at: string | null
+          currency: string | null
+          date: string
+          id: string
+          notes: string | null
+          number: string
+          partner_id: string
+          status: string | null
+          total_ht: number | null
+          total_tax: number | null
+          total_ttc: number | null
+          type: string
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          converted_to_order_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          number: string
+          partner_id: string
+          status?: string | null
+          total_ht?: number | null
+          total_tax?: number | null
+          total_ttc?: number | null
+          type: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          converted_to_order_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          number?: string
+          partner_id?: string
+          status?: string | null
+          total_ht?: number | null
+          total_tax?: number | null
+          total_ttc?: number | null
+          type?: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proformas_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -896,6 +1115,105 @@ export type Database = {
           prefix?: string
         }
         Relationships: []
+      }
+      stock_inventories: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          location_id: string | null
+          name: string
+          notes: string | null
+          number: string
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          location_id?: string | null
+          name: string
+          notes?: string | null
+          number: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          location_id?: string | null
+          name?: string
+          notes?: string | null
+          number?: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_inventories_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_inventory_lines: {
+        Row: {
+          counted_qty: number | null
+          created_at: string | null
+          difference: number | null
+          id: string
+          inventory_id: string | null
+          location_id: string
+          product_id: string
+          theoretical_qty: number | null
+        }
+        Insert: {
+          counted_qty?: number | null
+          created_at?: string | null
+          difference?: number | null
+          id?: string
+          inventory_id?: string | null
+          location_id: string
+          product_id: string
+          theoretical_qty?: number | null
+        }
+        Update: {
+          counted_qty?: number | null
+          created_at?: string | null
+          difference?: number | null
+          id?: string
+          inventory_id?: string | null
+          location_id?: string
+          product_id?: string
+          theoretical_qty?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_inventory_lines_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "stock_inventories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_inventory_lines_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_inventory_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_locations: {
         Row: {
@@ -1099,15 +1417,49 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "income" | "expense"
+      app_role:
+        | "admin"
+        | "demo"
+        | "user"
+        | "accountant"
+        | "sales"
+        | "stock_manager"
       cost_method: "fifo" | "average"
       invoice_status: "draft" | "posted" | "paid" | "cancelled"
       invoice_type: "customer" | "vendor" | "credit_note"
@@ -1247,6 +1599,14 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["asset", "liability", "equity", "income", "expense"],
+      app_role: [
+        "admin",
+        "demo",
+        "user",
+        "accountant",
+        "sales",
+        "stock_manager",
+      ],
       cost_method: ["fifo", "average"],
       invoice_status: ["draft", "posted", "paid", "cancelled"],
       invoice_type: ["customer", "vendor", "credit_note"],

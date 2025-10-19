@@ -46,10 +46,14 @@ const mockJournalEntries = [
 ];
 
 const accountingReports = [
-  { name: "Balance Générale", desc: "Balance des comptes", icon: FileText },
+  { name: "Balance Générale", desc: "Balance des comptes (OHADA)", icon: FileText },
   { name: "Grand Livre", desc: "Détail des écritures par compte", icon: FileText },
-  { name: "Journaux", desc: "Écritures par journal", icon: FileText },
+  { name: "Journaux Auxiliaires", desc: "Journal Ventes, Achats, Banque, OD", icon: FileText },
   { name: "Balance Âgée", desc: "Clients et fournisseurs", icon: FileText },
+  { name: "Bilan OHADA", desc: "Actif et Passif (système normal)", icon: FileText },
+  { name: "Compte de Résultat", desc: "Produits et Charges (OHADA)", icon: FileText },
+  { name: "Tableau de Flux de Trésorerie", desc: "TAFIRE (OHADA)", icon: FileText },
+  { name: "État Annexé", desc: "Notes et informations complémentaires", icon: FileText },
 ];
 
 export default function Accounting() {

@@ -58,6 +58,7 @@ const stockStats = [
 
 export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("products");
 
   return (
     <div className="space-y-6">
@@ -65,12 +66,16 @@ export default function Stock() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Stock</h1>
-          <p className="text-muted-foreground mt-1">Gestion des articles et inventaire</p>
+          <p className="text-muted-foreground mt-1">Gestion des articles, inventaire et mouvements</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <ArrowUpDown className="mr-2 h-4 w-4" />
             Mouvement
+          </Button>
+          <Button variant="outline">
+            <Search className="mr-2 h-4 w-4" />
+            Inventaire
           </Button>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -95,11 +100,14 @@ export default function Stock() {
         ))}
       </div>
 
-      {/* Products Table */}
+      {/* Products Table with Tabs */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Liste des Articles</CardTitle>
+            <CardTitle>
+              {activeTab === "products" && "Liste des Articles"}
+              {activeTab === "inventory" && "Inventaires Physiques"}
+            </CardTitle>
             <div className="flex w-72 items-center gap-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
@@ -112,7 +120,27 @@ export default function Stock() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="mb-4">
+            <div className="inline-flex gap-2 p-1 bg-muted rounded-lg">
+              <Button
+                variant={activeTab === "products" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("products")}
+              >
+                Articles
+              </Button>
+              <Button
+                variant={activeTab === "inventory" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("inventory")}
+              >
+                Inventaires
+              </Button>
+            </div>
+          </div>
+
+          {activeTab === "products" && (
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>SKU</TableHead>
@@ -156,6 +184,51 @@ export default function Stock() {
               ))}
             </TableBody>
           </Table>
+          )}
+
+          {activeTab === "inventory" && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Numéro</TableHead>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Emplacement</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Lignes</TableHead>
+                  <TableHead>Écarts</TableHead>
+                  <TableHead>Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">INV-2025-0001</TableCell>
+                  <TableCell>Inventaire Janvier 2025</TableCell>
+                  <TableCell>Entrepôt Principal</TableCell>
+                  <TableCell>15/01/2025</TableCell>
+                  <TableCell>156 articles</TableCell>
+                  <TableCell>
+                    <span className="text-warning font-semibold">-12 unités</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge>Terminé</Badge>
+                  </TableCell>
+                </TableRow>
+                <TableRow className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">INV-2025-0002</TableCell>
+                  <TableCell>Inventaire Tournant Zone A</TableCell>
+                  <TableCell>Zone A - Étagère 1-5</TableCell>
+                  <TableCell>18/01/2025</TableCell>
+                  <TableCell>45 articles</TableCell>
+                  <TableCell>
+                    <span className="text-success font-semibold">+3 unités</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">En cours</Badge>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

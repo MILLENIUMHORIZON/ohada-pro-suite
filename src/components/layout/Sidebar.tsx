@@ -8,11 +8,15 @@ import {
   Calculator,
   Settings,
   Building2,
+  ClipboardList,
+  ShoppingCart,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "CRM", href: "/crm", icon: Users },
+  { name: "Pro Forma", href: "/proforma", icon: ClipboardList },
+  { name: "Approvisionnements", href: "/procurement", icon: ShoppingCart },
   { name: "Facturation", href: "/invoicing", icon: FileText },
   { name: "Stock", href: "/stock", icon: Package },
   { name: "Comptabilité", href: "/accounting", icon: Calculator },
