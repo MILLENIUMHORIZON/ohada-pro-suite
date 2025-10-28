@@ -22,7 +22,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const partnerFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis").max(200),
@@ -31,6 +31,7 @@ const partnerFormSchema = z.object({
   address: z.string().optional(),
   nif: z.string().optional(),
   type: z.enum(["customer", "vendor", "both"]),
+  account_id: z.string().optional(),
 });
 
 type PartnerFormValues = z.infer<typeof partnerFormSchema>;
@@ -42,6 +43,7 @@ interface PartnerFormProps {
 
 export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [accounts, setAccounts] = useState<Array<{ id: string; code: string; name: string }>>([]);
 
   const form = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerFormSchema),
@@ -52,9 +54,23 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
       address: "",
       nif: "",
       type: "customer",
+      account_id: "",
       ...defaultValues,
     },
   });
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const { data } = await supabase
+        .from("accounts")
+        .select("id, code, name")
+        .eq("type", "asset")
+        .order("code");
+      
+      if (data) setAccounts(data);
+    };
+    loadAccounts();
+  }, []);
 
   const onSubmit = async (values: PartnerFormValues) => {
     setIsLoading(true);
@@ -76,6 +92,7 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
         address: values.address || null,
         nif: values.nif || null,
         type: values.type,
+        account_id: values.account_id || null,
         company_id: profile.company_id,
       }]);
 
@@ -190,6 +207,31 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="account_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Compte comptable client</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un compte" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.code} - {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading}>

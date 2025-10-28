@@ -660,6 +660,7 @@ export type Database = {
       }
       partners: {
         Row: {
+          account_id: string | null
           address: string | null
           company_id: string | null
           created_at: string | null
@@ -672,6 +673,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_id?: string | null
           address?: string | null
           company_id?: string | null
           created_at?: string | null
@@ -684,6 +686,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_id?: string | null
           address?: string | null
           company_id?: string | null
           created_at?: string | null
@@ -696,6 +699,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partners_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partners_company_id_fkey"
             columns: ["company_id"]
