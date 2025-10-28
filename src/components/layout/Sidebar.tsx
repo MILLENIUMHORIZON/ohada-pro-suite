@@ -11,6 +11,7 @@ import {
   Building2,
   ClipboardList,
   ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 import {
   Tooltip,
@@ -21,6 +22,7 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, shortcut: "⌘D" },
   { name: "CRM", href: "/crm", icon: Users, shortcut: "⌘C" },
+  { name: "Performance", href: "/sales-performance", icon: TrendingUp, shortcut: "⌘R" },
   { name: "Pro Forma", href: "/proforma", icon: ClipboardList, shortcut: "⌘P" },
   { name: "Approvisionnements", href: "/procurement", icon: ShoppingCart, shortcut: "⌘A" },
   { name: "Facturation", href: "/invoicing", icon: FileText, shortcut: "⌘F" },
@@ -45,6 +47,10 @@ export const Sidebar = () => {
           case 'c':
             e.preventDefault();
             navigate('/crm');
+            break;
+          case 'r':
+            e.preventDefault();
+            navigate('/sales-performance');
             break;
           case 'p':
             e.preventDefault();

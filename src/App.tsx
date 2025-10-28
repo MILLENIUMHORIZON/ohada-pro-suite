@@ -20,6 +20,7 @@ import UserManagement from "./pages/UserManagement";
 import Proforma from "./pages/Proforma";
 import Procurement from "./pages/Procurement";
 import ReferenceData from "./pages/ReferenceData";
+import SalesPerformance from "./pages/SalesPerformance";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -84,6 +85,7 @@ const App = () => {
             <Route path="/accounting" element={<AppLayout><Accounting /></AppLayout>} />
             <Route path="/proforma" element={<AppLayout><Proforma /></AppLayout>} />
             <Route path="/procurement" element={<AppLayout><Procurement /></AppLayout>} />
+            <Route path="/sales-performance" element={<AppLayout><SalesPerformance /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/company-settings" element={<AppLayout><CompanySettings /></AppLayout>} />
             <Route path="/activation" element={<AppLayout><AccountActivation /></AppLayout>} />
