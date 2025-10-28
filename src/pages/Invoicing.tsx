@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, FileText, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InvoiceForm } from "@/components/forms/InvoiceForm";
 import {
   Table,
   TableBody,
@@ -59,6 +61,7 @@ const statusConfig = {
 export default function Invoicing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -73,7 +76,7 @@ export default function Invoicing() {
             <FileText className="mr-2 h-4 w-4" />
             Devis
           </Button>
-          <Button>
+          <Button onClick={() => setIsInvoiceDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nouvelle Facture
           </Button>
@@ -194,6 +197,15 @@ export default function Invoicing() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouvelle Facture</DialogTitle>
+          </DialogHeader>
+          <InvoiceForm onSuccess={() => setIsInvoiceDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
