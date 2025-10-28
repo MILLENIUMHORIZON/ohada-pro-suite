@@ -29,7 +29,7 @@ const productFormSchema = z.object({
   sku: z.string().min(1, "La référence est requise"),
   category_id: z.string().optional(),
   uom_id: z.string().optional(),
-  type: z.enum(["stock", "service", "consumable"]),
+  type: z.enum(["stock", "service"]),
   unit_price: z.string().min(1, "Le prix de vente est requis"),
   cost_price: z.string().optional(),
   description: z.string().optional(),
@@ -106,7 +106,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         return;
       }
 
-      const { error } = await supabase.from("products").insert({
+      const { error } = await supabase.from("products").insert([{
         name: values.name,
         sku: values.sku,
         category_id: values.category_id || null,
@@ -116,7 +116,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         cost_price: parseFloat(values.cost_price || "0"),
         description: values.description || null,
         company_id: profile.company_id,
-      });
+      }]);
 
       if (error) throw error;
 
@@ -177,7 +177,6 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
                   <SelectContent>
                     <SelectItem value="stock">Stockable</SelectItem>
                     <SelectItem value="service">Service</SelectItem>
-                    <SelectItem value="consumable">Consommable</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

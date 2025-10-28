@@ -75,7 +75,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     const [partnersRes, productsRes, taxesRes] = await Promise.all([
       supabase.from("partners").select("id, name").order("name"),
       supabase.from("products").select("id, name, unit_price").order("name"),
-      supabase.from("taxes").select("id, name, rate").eq("type", "sale").order("name"),
+      supabase.from("taxes").select("id, name, rate").order("name"),
     ]);
 
     if (partnersRes.data) setPartners(partnersRes.data);
@@ -99,14 +99,14 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       // Créer la facture
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
-        .insert({
+        .insert([{
           number: values.number,
           partner_id: values.partner_id,
           date: values.date,
           due_date: values.due_date,
           status: "draft",
           type: "customer",
-        })
+        }])
         .select()
         .single();
 

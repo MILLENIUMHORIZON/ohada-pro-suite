@@ -30,7 +30,7 @@ const partnerFormSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   nif: z.string().optional(),
-  type: z.enum(["customer", "supplier", "both"]),
+  type: z.enum(["customer", "vendor", "both"]),
 });
 
 type PartnerFormValues = z.infer<typeof partnerFormSchema>;
@@ -69,7 +69,7 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
         return;
       }
 
-      const { error } = await supabase.from("partners").insert({
+      const { error } = await supabase.from("partners").insert([{
         name: values.name,
         email: values.email || null,
         phone: values.phone || null,
@@ -77,7 +77,7 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
         nif: values.nif || null,
         type: values.type,
         company_id: profile.company_id,
-      });
+      }]);
 
       if (error) throw error;
 
@@ -181,7 +181,7 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="customer">Client</SelectItem>
-                    <SelectItem value="supplier">Fournisseur</SelectItem>
+                    <SelectItem value="vendor">Fournisseur</SelectItem>
                     <SelectItem value="both">Client et Fournisseur</SelectItem>
                   </SelectContent>
                 </Select>
