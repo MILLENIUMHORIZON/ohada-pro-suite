@@ -5,6 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/forms/LeadForm";
+import { PartnerForm } from "@/components/forms/PartnerForm";
 import {
   Table,
   TableBody,
@@ -56,6 +57,7 @@ const stages = [
 export default function CRM() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
+  const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -65,10 +67,16 @@ export default function CRM() {
           <h1 className="text-3xl font-bold text-foreground">CRM</h1>
           <p className="text-muted-foreground mt-1">Gestion de la relation client</p>
         </div>
-        <Button onClick={() => setIsLeadDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvelle Opportunité
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsClientDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouveau Client
+          </Button>
+          <Button onClick={() => setIsLeadDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouvelle Opportunité
+          </Button>
+        </div>
       </div>
 
       {/* Pipeline Overview */}
@@ -148,6 +156,18 @@ export default function CRM() {
             <DialogTitle>Nouvelle Opportunité</DialogTitle>
           </DialogHeader>
           <LeadForm onSuccess={() => setIsLeadDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nouveau Client</DialogTitle>
+          </DialogHeader>
+          <PartnerForm 
+            onSuccess={() => setIsClientDialogOpen(false)}
+            defaultValues={{ type: "customer" }}
+          />
         </DialogContent>
       </Dialog>
     </div>

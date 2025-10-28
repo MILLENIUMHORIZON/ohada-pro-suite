@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Download } from "lucide-react";
@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { JournalEntryForm } from "@/components/forms/JournalEntryForm";
+import { AccountForm } from "@/components/forms/AccountForm";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -67,6 +69,21 @@ const accountingReports = [
 
 export default function Accounting() {
   const [isJournalEntryDialogOpen, setIsJournalEntryDialogOpen] = useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+
+  const loadAccounts = async () => {
+    const { data } = await supabase
+      .from("accounts")
+      .select("*")
+      .order("code");
+    
+    if (data) setAccounts(data);
+  };
+
+  useEffect(() => {
+    loadAccounts();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -142,6 +159,7 @@ export default function Accounting() {
       <Tabs defaultValue="entries" className="space-y-4">
         <TabsList>
           <TabsTrigger value="entries">Écritures Comptables</TabsTrigger>
+          <TabsTrigger value="accounts">Plan Comptable</TabsTrigger>
           <TabsTrigger value="reports">Rapports</TabsTrigger>
           <TabsTrigger value="taxes">TVA</TabsTrigger>
         </TabsList>
@@ -177,6 +195,58 @@ export default function Accounting() {
                         <Badge variant={entry.status === "posted" ? "default" : "secondary"}>
                           {entry.status === "posted" ? "Validée" : "Brouillon"}
                         </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="accounts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Plan Comptable OHADA</CardTitle>
+                <Button onClick={() => setIsAccountDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouveau Compte
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Lettrable</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts.map((account) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-mono">{account.code}</TableCell>
+                      <TableCell>{account.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {account.type === 'asset' && 'Actif'}
+                          {account.type === 'liability' && 'Passif'}
+                          {account.type === 'equity' && 'Capitaux'}
+                          {account.type === 'income' && 'Produit'}
+                          {account.type === 'expense' && 'Charge'}
+                          {account.type === 'receivable' && 'Créance'}
+                          {account.type === 'payable' && 'Dette'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {account.reconcilable ? (
+                          <Badge variant="default">Oui</Badge>
+                        ) : (
+                          <Badge variant="secondary">Non</Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -253,6 +323,22 @@ export default function Accounting() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Account Creation Dialog */}
+      <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouveau Compte Comptable</DialogTitle>
+            <DialogDescription>
+              Créer un nouveau compte dans le plan comptable OHADA
+            </DialogDescription>
+          </DialogHeader>
+          <AccountForm onSuccess={() => {
+            setIsAccountDialogOpen(false);
+            loadAccounts();
+          }} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
