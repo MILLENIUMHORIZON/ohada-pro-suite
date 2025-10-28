@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Download, Printer, Edit } from "lucide-react";
+import { Plus, Search, FileText, Download, Printer, Edit, CheckCircle, DollarSign, FileX } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
+import { PaymentForm } from "@/components/forms/PaymentForm";
+import { CreditNoteForm } from "@/components/forms/CreditNoteForm";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInvoicePDF } from "@/utils/invoicePdfGenerator";
 import { toast } from "sonner";
@@ -41,9 +43,13 @@ export default function Invoicing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isCreditNoteDialogOpen, setIsCreditNoteDialogOpen] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [company, setCompany] = useState<any>(null);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
+  const [selectedInvoiceForCredit, setSelectedInvoiceForCredit] = useState<any>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -185,6 +191,22 @@ export default function Invoicing() {
     } catch (error) {
       console.error("Error printing PDF:", error);
       toast.error("Erreur lors de l'impression");
+    }
+  };
+
+  const handleValidateInvoice = async (invoice: any) => {
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ status: "posted" })
+        .eq("id", invoice.id);
+
+      if (error) throw error;
+
+      toast.success("Facture validée avec succès");
+      loadInvoices();
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la validation");
     }
   };
 
@@ -346,13 +368,37 @@ export default function Invoicing() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {invoice.status === 'draft' && (
-                          <DropdownMenuItem onClick={() => {
-                            setEditingInvoice(invoice);
-                            setIsInvoiceDialogOpen(true);
-                          }}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem onClick={() => {
+                              setEditingInvoice(invoice);
+                              setIsInvoiceDialogOpen(true);
+                            }}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleValidateInvoice(invoice)}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Valider
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {invoice.status === 'posted' && (
+                          <>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedInvoiceForPayment(invoice);
+                              setIsPaymentDialogOpen(true);
+                            }}>
+                              <DollarSign className="mr-2 h-4 w-4" />
+                              Enregistrer un paiement
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedInvoiceForCredit(invoice);
+                              setIsCreditNoteDialogOpen(true);
+                            }}>
+                              <FileX className="mr-2 h-4 w-4" />
+                              Créer une note de crédit
+                            </DropdownMenuItem>
+                          </>
                         )}
                         <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
                           <Download className="mr-2 h-4 w-4" />
@@ -396,6 +442,48 @@ export default function Invoicing() {
               loadInvoices();
             }} 
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => {
+        setIsPaymentDialogOpen(open);
+        if (!open) setSelectedInvoiceForPayment(null);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Enregistrer un paiement</DialogTitle>
+          </DialogHeader>
+          {selectedInvoiceForPayment && (
+            <PaymentForm 
+              invoice={selectedInvoiceForPayment}
+              onSuccess={() => {
+                setIsPaymentDialogOpen(false);
+                setSelectedInvoiceForPayment(null);
+                loadInvoices();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreditNoteDialogOpen} onOpenChange={(open) => {
+        setIsCreditNoteDialogOpen(open);
+        if (!open) setSelectedInvoiceForCredit(null);
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Créer une note de crédit</DialogTitle>
+          </DialogHeader>
+          {selectedInvoiceForCredit && (
+            <CreditNoteForm 
+              invoice={selectedInvoiceForCredit}
+              onSuccess={() => {
+                setIsCreditNoteDialogOpen(false);
+                setSelectedInvoiceForCredit(null);
+                loadInvoices();
+              }} 
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
