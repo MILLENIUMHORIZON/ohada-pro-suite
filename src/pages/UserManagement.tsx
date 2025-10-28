@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, ChevronDown, ChevronUp, Search, UserPlus } from "lucide-react";
+import { Shield, User, ChevronDown, ChevronUp, Search, UserPlus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,8 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
@@ -496,6 +498,18 @@ export default function UserManagement() {
               {isCreating ? "Création..." : "Créer l'utilisateur"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Permissions des Modules</DialogTitle>
+            <DialogDescription>
+              Gérez les modules accessibles pour cet utilisateur
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUserId && <ModulePermissions userId={selectedUserId} />}
         </DialogContent>
       </Dialog>
     </div>
