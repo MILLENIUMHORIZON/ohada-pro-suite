@@ -287,6 +287,7 @@ export type Database = {
           email: string | null
           id: string
           id_nat: string | null
+          logo_url: string | null
           name: string
           nif: string | null
           phone: string | null
@@ -302,6 +303,7 @@ export type Database = {
           email?: string | null
           id?: string
           id_nat?: string | null
+          logo_url?: string | null
           name: string
           nif?: string | null
           phone?: string | null
@@ -317,6 +319,7 @@ export type Database = {
           email?: string | null
           id?: string
           id_nat?: string | null
+          logo_url?: string | null
           name?: string
           nif?: string | null
           phone?: string | null

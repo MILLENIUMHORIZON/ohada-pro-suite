@@ -120,6 +120,7 @@ export default function Invoicing() {
           email: company?.email,
           nif: company?.nif,
           rccm: company?.rccm,
+          logoUrl: company?.logo_url,
         },
         lines: invoice.lines.map((line: any) => ({
           description: line.product?.name || line.description || "",
@@ -163,6 +164,7 @@ export default function Invoicing() {
           email: company?.email,
           nif: company?.nif,
           rccm: company?.rccm,
+          logoUrl: company?.logo_url,
         },
         lines: invoice.lines.map((line: any) => ({
           description: line.product?.name || line.description || "",

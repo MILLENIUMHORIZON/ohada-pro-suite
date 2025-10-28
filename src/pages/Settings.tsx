@@ -7,7 +7,7 @@ const settingsSections = [
     title: "Entreprise",
     description: "Informations de votre société",
     icon: Building2,
-    path: null,
+    path: "/company-settings",
   },
   {
     title: "Utilisateurs & Rôles",

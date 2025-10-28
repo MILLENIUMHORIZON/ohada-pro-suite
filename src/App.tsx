@@ -13,6 +13,7 @@ import Invoicing from "./pages/Invoicing";
 import Stock from "./pages/Stock";
 import Accounting from "./pages/Accounting";
 import Settings from "./pages/Settings";
+import CompanySettings from "./pages/CompanySettings";
 import AccountActivation from "./pages/AccountActivation";
 import ManageActivationKeys from "./pages/ManageActivationKeys";
 import UserManagement from "./pages/UserManagement";
@@ -84,6 +85,7 @@ const App = () => {
             <Route path="/proforma" element={<AppLayout><Proforma /></AppLayout>} />
             <Route path="/procurement" element={<AppLayout><Procurement /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
+            <Route path="/company-settings" element={<AppLayout><CompanySettings /></AppLayout>} />
             <Route path="/activation" element={<AppLayout><AccountActivation /></AppLayout>} />
             <Route path="/manage-keys" element={<AppLayout><ManageActivationKeys /></AppLayout>} />
             <Route path="/users" element={<AppLayout><UserManagement /></AppLayout>} />

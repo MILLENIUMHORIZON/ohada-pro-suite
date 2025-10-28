@@ -27,6 +27,7 @@ interface InvoiceData {
     email?: string;
     nif?: string;
     rccm?: string;
+    logoUrl?: string;
   };
   lines: InvoiceLine[];
   totalHT: number;
@@ -39,33 +40,46 @@ interface InvoiceData {
 export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'print' = 'download') {
   const doc = new jsPDF();
   
+  let startY = 20;
+
+  // Add logo if available
+  if (invoice.company.logoUrl) {
+    try {
+      doc.addImage(invoice.company.logoUrl, 'PNG', 20, startY, 30, 30);
+      startY = 55;
+    } catch (error) {
+      console.error("Error adding logo to PDF:", error);
+      startY = 20;
+    }
+  }
+  
   // Header - Company Info
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text(invoice.company.name, 20, 20);
+  doc.text(invoice.company.name, invoice.company.logoUrl ? 55 : 20, invoice.company.logoUrl ? 25 : 20);
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  let yPos = 28;
+  let yPos = invoice.company.logoUrl ? 33 : 28;
   
   if (invoice.company.address) {
-    doc.text(invoice.company.address, 20, yPos);
+    doc.text(invoice.company.address, invoice.company.logoUrl ? 55 : 20, yPos);
     yPos += 5;
   }
   if (invoice.company.phone) {
-    doc.text(`Tél: ${invoice.company.phone}`, 20, yPos);
+    doc.text(`Tél: ${invoice.company.phone}`, invoice.company.logoUrl ? 55 : 20, yPos);
     yPos += 5;
   }
   if (invoice.company.email) {
-    doc.text(`Email: ${invoice.company.email}`, 20, yPos);
+    doc.text(`Email: ${invoice.company.email}`, invoice.company.logoUrl ? 55 : 20, yPos);
     yPos += 5;
   }
   if (invoice.company.nif) {
-    doc.text(`NIF: ${invoice.company.nif}`, 20, yPos);
+    doc.text(`NIF: ${invoice.company.nif}`, invoice.company.logoUrl ? 55 : 20, yPos);
     yPos += 5;
   }
   if (invoice.company.rccm) {
-    doc.text(`RCCM: ${invoice.company.rccm}`, 20, yPos);
+    doc.text(`RCCM: ${invoice.company.rccm}`, invoice.company.logoUrl ? 55 : 20, yPos);
     yPos += 5;
   }
 
