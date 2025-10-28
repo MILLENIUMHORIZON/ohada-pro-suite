@@ -21,17 +21,45 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length === 0) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    // Parse CSV properly handling quoted values
+    const parseLine = (line: string): string[] => {
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      return values;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase());
     const accounts = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      if (values.length === headers.length) {
+      const values = parseLine(lines[i]);
+      if (values.length >= 3) { // At minimum: code, name, type
         const account: any = {};
         headers.forEach((header, index) => {
-          account[header] = values[index];
+          if (index < values.length) {
+            account[header] = values[index];
+          }
         });
-        accounts.push(account);
+        
+        // Skip invalid entries
+        if (account.code && account.name && account.type) {
+          accounts.push(account);
+        }
       }
     }
 
@@ -80,21 +108,42 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
         return;
       }
 
+      // Check for existing accounts to avoid duplicates
+      const { data: existingAccounts } = await supabase
+        .from("accounts")
+        .select("code")
+        .eq("company_id", profile.company_id);
+      
+      const existingCodes = new Set(existingAccounts?.map(a => a.code) || []);
+
       // Import accounts one by one
       for (const account of accounts) {
         try {
-          // Map type aliases (income -> revenue)
-          let accountType = account.type;
-          if (accountType === 'income') {
-            accountType = 'revenue';
+          // Skip if already exists
+          if (existingCodes.has(account.code)) {
+            errors.push(`Compte ${account.code}: Déjà existant (ignoré)`);
+            continue;
+          }
+
+          // Map type aliases (revenue -> income, as per database schema)
+          let accountType = account.type.toLowerCase();
+          if (accountType === 'revenue') {
+            accountType = 'income';
+          }
+          
+          // Validate type
+          const validTypes = ['asset', 'liability', 'equity', 'income', 'expense', 'receivable', 'payable'];
+          if (!validTypes.includes(accountType)) {
+            errors.push(`Compte ${account.code}: Type invalide '${account.type}'`);
+            continue;
           }
           
           const { error } = await supabase.from("accounts").insert({
             company_id: profile.company_id,
-            code: account.code,
-            name: account.name || account.nom,
+            code: account.code.trim(),
+            name: (account.name || account.nom).trim(),
             type: accountType,
-            reconcilable: account.reconcilable === 'true' || account.reconcilable === '1' || account.lettrable === 'true' || account.lettrable === '1',
+            reconcilable: account.reconcilable === 'true' || account.reconcilable === '1' || account.lettrable === 'true' || account.lettrable === '1' || false,
           });
 
           if (error) {
@@ -102,8 +151,8 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
           } else {
             successCount++;
           }
-        } catch (err) {
-          errors.push(`Compte ${account.code}: Erreur inconnue`);
+        } catch (err: any) {
+          errors.push(`Compte ${account.code}: ${err.message || 'Erreur inconnue'}`);
         }
       }
 
@@ -260,39 +309,39 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
 674000,Autres frais financiers,expense,false
 676000,Pertes de change,expense,false
 677000,Charges sur cession de titres de placement,expense,false
-70,VENTES,revenue,false
-701000,Ventes de marchandises,revenue,false
-702000,Ventes de produits finis,revenue,false
-703000,Ventes de produits intermédiaires,revenue,false
-704000,Ventes de produits résiduels,revenue,false
-706000,Services vendus,revenue,false
-707000,Ventes de marchandises,revenue,false
-71,SUBVENTIONS D'EXPLOITATION,revenue,false
-711000,Subventions d'équilibre,revenue,false
-712000,Subventions compensatrices,revenue,false
-718000,Autres subventions d'exploitation,revenue,false
-72,PRODUCTION IMMOBILISEE,revenue,false
-721000,Immobilisations incorporelles,revenue,false
-722000,Immobilisations corporelles,revenue,false
-73,VARIATIONS DES STOCKS DE BIENS ET DE SERVICES PRODUITS,revenue,false
-734000,Variations des stocks de produits en cours,revenue,false
-735000,Variations des stocks de services en cours,revenue,false
-74,PRESTATIONS FOURNIES,revenue,false
-741000,Travaux,revenue,false
-742000,Etudes,revenue,false
-743000,Prestations de services,revenue,false
-75,AUTRES PRODUITS,revenue,false
-751000,Redevances pour brevets licences,revenue,false
-752000,Revenus des immeubles non affectés aux activités professionnelles,revenue,false
-753000,Jetons de présence,revenue,false
-754000,Ristournes perçues des coopératives,revenue,false
-758000,Produits divers,revenue,false
-77,REVENUS FINANCIERS ET PRODUITS ASSIMILES,revenue,false
-771000,Intérêts de prêts,revenue,false
-772000,Revenus de participations,revenue,false
-773000,Escomptes obtenus,revenue,false
-776000,Gains de change,revenue,false
-777000,Produits de cession de titres de placement,revenue,false`;
+70,VENTES,income,false
+701000,Ventes de marchandises,income,false
+702000,Ventes de produits finis,income,false
+703000,Ventes de produits intermédiaires,income,false
+704000,Ventes de produits résiduels,income,false
+706000,Services vendus,income,false
+707000,Produits de négoce,income,false
+71,SUBVENTIONS D'EXPLOITATION,income,false
+711000,Subventions d'équilibre,income,false
+712000,Subventions compensatrices,income,false
+718000,Autres subventions d'exploitation,income,false
+72,PRODUCTION IMMOBILISEE,income,false
+721000,Immobilisations incorporelles,income,false
+722000,Immobilisations corporelles,income,false
+73,VARIATIONS DES STOCKS DE BIENS ET DE SERVICES PRODUITS,income,false
+734000,Variations des stocks de produits en cours,income,false
+735000,Variations des stocks de services en cours,income,false
+74,PRESTATIONS FOURNIES,income,false
+741000,Travaux,income,false
+742000,Etudes,income,false
+743000,Prestations de services,income,false
+75,AUTRES PRODUITS,income,false
+751000,Redevances pour brevets licences,income,false
+752000,Revenus des immeubles non affectés aux activités professionnelles,income,false
+753000,Jetons de présence,income,false
+754000,Ristournes perçues des coopératives,income,false
+758000,Produits divers,income,false
+77,REVENUS FINANCIERS ET PRODUITS ASSIMILES,income,false
+771000,Intérêts de prêts,income,false
+772000,Revenus de participations,income,false
+773000,Escomptes obtenus,income,false
+776000,Gains de change,income,false
+777000,Produits de cession de titres de placement,income,false`;
 
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
@@ -313,7 +362,7 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
         <AlertDescription>
           Format CSV attendu: code, name, type, reconcilable
           <br />
-          Types valides: asset, liability, equity, revenue (income), expense, receivable, payable
+          Types valides: asset, liability, equity, income, expense, receivable, payable
           <br />
           Le template inclut un plan comptable OHADA complet avec plus de 150 comptes.
           <br />
