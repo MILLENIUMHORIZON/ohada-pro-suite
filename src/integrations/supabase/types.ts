@@ -281,6 +281,7 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          country: string | null
           created_at: string | null
           currency: string | null
           email: string | null
@@ -290,10 +291,12 @@ export type Database = {
           nif: string | null
           phone: string | null
           rccm: string | null
+          registration_number: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          country?: string | null
           created_at?: string | null
           currency?: string | null
           email?: string | null
@@ -303,10 +306,12 @@ export type Database = {
           nif?: string | null
           phone?: string | null
           rccm?: string | null
+          registration_number?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          country?: string | null
           created_at?: string | null
           currency?: string | null
           email?: string | null
@@ -316,6 +321,7 @@ export type Database = {
           nif?: string | null
           phone?: string | null
           rccm?: string | null
+          registration_number?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1714,10 +1720,7 @@ export type Database = {
         Args: { activation_key: string }
         Returns: Json
       }
-      get_user_company_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_company_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
