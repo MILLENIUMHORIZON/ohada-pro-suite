@@ -1,7 +1,16 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { JournalEntryForm } from "@/components/forms/JournalEntryForm";
 import {
   Table,
   TableBody,
@@ -57,6 +66,8 @@ const accountingReports = [
 ];
 
 export default function Accounting() {
+  const [isJournalEntryDialogOpen, setIsJournalEntryDialogOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -65,11 +76,24 @@ export default function Accounting() {
           <h1 className="text-3xl font-bold text-foreground">Comptabilité</h1>
           <p className="text-muted-foreground mt-1">Gestion comptable OHADA</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsJournalEntryDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nouvelle Écriture
         </Button>
       </div>
+
+      {/* Journal Entry Dialog */}
+      <Dialog open={isJournalEntryDialogOpen} onOpenChange={setIsJournalEntryDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nouvelle Écriture Comptable</DialogTitle>
+            <DialogDescription>
+              Créer une nouvelle écriture comptable
+            </DialogDescription>
+          </DialogHeader>
+          <JournalEntryForm onSuccess={() => setIsJournalEntryDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       {/* Accounting Overview */}
       <div className="grid gap-4 md:grid-cols-4">
