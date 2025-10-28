@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Pencil } from "lucide-react";
+import { Plus, Search, Pencil, TrendingUp, DollarSign, Target, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/forms/LeadForm";
@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -90,6 +91,16 @@ export default function CRM() {
     loadPartners();
   };
 
+  // Calcul des KPIs
+  const totalRevenue = leads.reduce((sum, lead) => sum + (lead.expected_revenue || 0), 0);
+  const averageRevenue = leads.length > 0 ? totalRevenue / leads.length : 0;
+  const wonLeads = leads.filter(lead => lead.stage?.won_flag);
+  const conversionRate = leads.length > 0 ? (wonLeads.length / leads.length) * 100 : 0;
+  const totalPartners = partners.length;
+  const averageProbability = leads.length > 0 
+    ? leads.reduce((sum, lead) => sum + (lead.probability || 0), 0) / leads.length 
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -108,6 +119,67 @@ export default function CRM() {
             Nouvelle Opportunité
           </Button>
         </div>
+      </div>
+
+      {/* KPIs Section */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Revenu Total Prévu</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(totalRevenue)} CDF
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sur {leads.length} opportunité{leads.length > 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Taux de Conversion</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
+            <Progress value={conversionRate} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {wonLeads.length} opportunité{wonLeads.length > 1 ? 's' : ''} gagnée{wonLeads.length > 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Valeur Moyenne</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(averageRevenue)} CDF
+            </div>
+            <Progress value={averageProbability} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Probabilité moyenne: {averageProbability.toFixed(0)}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Partenaires Actifs</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPartners}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {partners.filter(p => p.type === 'customer').length} client{partners.filter(p => p.type === 'customer').length > 1 ? 's' : ''} • {partners.filter(p => p.type === 'vendor').length} fournisseur{partners.filter(p => p.type === 'vendor').length > 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Pipeline Overview */}
