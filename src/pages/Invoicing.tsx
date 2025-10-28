@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Download, Printer, Edit, CheckCircle, DollarSign, FileX } from "lucide-react";
+import { Plus, Search, FileText, Download, Printer, Edit, CheckCircle, DollarSign, FileX, MoreVertical } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
@@ -363,7 +363,7 @@ export default function Invoicing() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          <Download className="h-4 w-4" />
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
