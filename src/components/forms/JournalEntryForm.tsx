@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const lineSchema = z.object({
   account_id: z.string().min(1, "Compte requis"),
+  type: z.enum(["debit", "credit"] as const),
   amount: z.string().min(1, "Montant requis").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Montant invalide"),
 });
 
@@ -35,17 +36,20 @@ const journalEntryFormSchema = z.object({
   journal_id: z.string().min(1, "Journal requis"),
   reference: z.string().optional(),
   description: z.string().min(1, "Description requise"),
-  debit_lines: z.array(lineSchema).min(1, "Au moins une ligne de débit requise"),
-  credit_lines: z.array(lineSchema).min(1, "Au moins une ligne de crédit requise"),
+  lines: z.array(lineSchema).min(2, "Au moins deux lignes requises"),
 }).refine(
   (data) => {
-    const totalDebit = data.debit_lines.reduce((sum, line) => sum + Number(line.amount), 0);
-    const totalCredit = data.credit_lines.reduce((sum, line) => sum + Number(line.amount), 0);
+    const totalDebit = data.lines
+      .filter(line => line.type === "debit")
+      .reduce((sum, line) => sum + Number(line.amount), 0);
+    const totalCredit = data.lines
+      .filter(line => line.type === "credit")
+      .reduce((sum, line) => sum + Number(line.amount), 0);
     return Math.abs(totalDebit - totalCredit) < 0.01;
   },
   {
     message: "Le total débit doit être égal au total crédit",
-    path: ["debit_lines"],
+    path: ["lines"],
   }
 );
 
@@ -86,26 +90,28 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
       journal_id: "",
       reference: "",
       description: "",
-      debit_lines: [{ account_id: "", amount: "" }],
-      credit_lines: [{ account_id: "", amount: "" }],
+      lines: [
+        { account_id: "", type: "debit", amount: "" },
+        { account_id: "", type: "credit", amount: "" },
+      ],
     },
   });
 
-  const { fields: debitFields, append: appendDebit, remove: removeDebit } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "debit_lines",
+    name: "lines",
   });
 
-  const { fields: creditFields, append: appendCredit, remove: removeCredit } = useFieldArray({
-    control: form.control,
-    name: "credit_lines",
-  });
+  const watchLines = form.watch("lines");
 
-  const watchDebitLines = form.watch("debit_lines");
-  const watchCreditLines = form.watch("credit_lines");
-
-  const totalDebit = watchDebitLines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
-  const totalCredit = watchCreditLines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+  const totalDebit = watchLines
+    .filter(line => line.type === "debit")
+    .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+  
+  const totalCredit = watchLines
+    .filter(line => line.type === "credit")
+    .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+  
   const difference = totalDebit - totalCredit;
 
   const onSubmit = async (data: JournalEntryFormValues) => {
@@ -150,35 +156,20 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
 
       if (moveError) throw moveError;
 
-      // Create all debit lines
-      const debitLines = data.debit_lines.map(line => ({
+      // Create all lines (debit and credit)
+      const allLines = data.lines.map(line => ({
         move_id: move.id,
         account_id: line.account_id,
-        debit: Number(line.amount),
-        credit: 0,
+        debit: line.type === "debit" ? Number(line.amount) : 0,
+        credit: line.type === "credit" ? Number(line.amount) : 0,
         currency: "CDF",
       }));
 
-      const { error: debitError } = await supabase
+      const { error: linesError } = await supabase
         .from("account_move_lines")
-        .insert(debitLines);
+        .insert(allLines);
 
-      if (debitError) throw debitError;
-
-      // Create all credit lines
-      const creditLines = data.credit_lines.map(line => ({
-        move_id: move.id,
-        account_id: line.account_id,
-        debit: 0,
-        credit: Number(line.amount),
-        currency: "CDF",
-      }));
-
-      const { error: creditError } = await supabase
-        .from("account_move_lines")
-        .insert(creditLines);
-
-      if (creditError) throw creditError;
+      if (linesError) throw linesError;
 
       toast.success("Écriture comptable créée avec succès");
       form.reset();
@@ -266,36 +257,36 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
           )}
         />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Debit Lines */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Lignes de Débit</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => appendDebit({ account_id: "", amount: "" })}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Ajouter
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {debitFields.map((field, index) => (
-                <div key={field.id} className="space-y-2 p-3 border rounded-lg bg-muted/30">
+        {/* Lines Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Lignes d'écriture</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ account_id: "", type: "debit", amount: "" })}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter une ligne
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/30">
+                <div className="col-span-5">
                   <FormField
                     control={form.control}
-                    name={`debit_lines.${index}.account_id`}
+                    name={`lines.${index}.account_id`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">Compte</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Sélectionner" />
+                              <SelectValue placeholder="Sélectionner un compte" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -310,161 +301,92 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
                       </FormItem>
                     )}
                   />
-                  <div className="flex gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`debit_lines.${index}.amount`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel className="text-xs">Montant (CDF)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              step="0.01"
-                              className="h-9"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {debitFields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="mt-6 h-9 w-9"
-                        onClick={() => removeDebit(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
                 </div>
-              ))}
-              <div className="pt-2 border-t">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total Débit:</span>
-                  <span className="font-mono">
-                    {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalDebit)} CDF
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Credit Lines */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Lignes de Crédit</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => appendCredit({ account_id: "", amount: "" })}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Ajouter
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {creditFields.map((field, index) => (
-                <div key={field.id} className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                <div className="col-span-3">
                   <FormField
                     control={form.control}
-                    name={`credit_lines.${index}.account_id`}
+                    name={`lines.${index}.type`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Compte</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel className="text-xs">Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Sélectionner" />
+                              <SelectValue placeholder="Type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {accounts.map((account) => (
-                              <SelectItem key={account.id} value={account.id}>
-                                {account.code} - {account.name}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="debit">Débit</SelectItem>
+                            <SelectItem value="credit">Crédit</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <div className="flex gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`credit_lines.${index}.amount`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel className="text-xs">Montant (CDF)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              step="0.01"
-                              className="h-9"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {creditFields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="mt-6 h-9 w-9"
-                        onClick={() => removeCredit(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
                 </div>
-              ))}
-              <div className="pt-2 border-t">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total Crédit:</span>
-                  <span className="font-mono">
-                    {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalCredit)} CDF
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Balance Summary */}
-        <Card className={difference !== 0 ? "border-destructive" : "border-primary"}>
-          <CardContent className="pt-4">
-            <div className="space-y-2">
+                <div className="col-span-3">
+                  <FormField
+                    control={form.control}
+                    name={`lines.${index}.amount`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Montant (CDF)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="0.00" 
+                            step="0.01"
+                            className="h-9"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="col-span-1 flex items-end">
+                  {fields.length > 2 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => remove(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <div className="pt-3 border-t space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Total Débit:</span>
-                <span className="font-mono">{new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalDebit)} CDF</span>
+                <span className="text-muted-foreground">Total Débit:</span>
+                <span className="font-mono font-semibold">
+                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalDebit)} CDF
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Total Crédit:</span>
-                <span className="font-mono">{new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalCredit)} CDF</span>
+                <span className="text-muted-foreground">Total Crédit:</span>
+                <span className="font-mono font-semibold">
+                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalCredit)} CDF
+                </span>
               </div>
-              <div className="flex justify-between font-bold pt-2 border-t">
+              <div className={`flex justify-between font-bold pt-2 border-t ${difference !== 0 ? 'text-destructive' : 'text-primary'}`}>
                 <span>Différence:</span>
-                <span className={`font-mono ${difference !== 0 ? 'text-destructive' : 'text-primary'}`}>
+                <span className="font-mono">
                   {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(Math.abs(difference))} CDF
                 </span>
               </div>
               {difference !== 0 && (
-                <p className="text-xs text-destructive pt-2">
-                  L'écriture doit être équilibrée (Débit = Crédit)
+                <p className="text-xs text-destructive">
+                  ⚠️ L'écriture doit être équilibrée (Débit = Crédit)
                 </p>
               )}
             </div>
