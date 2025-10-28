@@ -35,9 +35,9 @@ const settingsSections = [
   },
   {
     title: "Données de Référence",
-    description: "Plan comptable, taxes, journaux",
+    description: "Taxes, unités de mesure, catégories",
     icon: Database,
-    path: null,
+    path: "/reference-data",
   },
 ];
 
