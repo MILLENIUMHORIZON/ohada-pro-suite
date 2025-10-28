@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, FileText, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InvoiceForm } from "@/components/forms/InvoiceForm";
 import {
   Table,
   TableBody,
@@ -58,6 +60,7 @@ const statusConfig = {
 export default function Proforma() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [isProformaDialogOpen, setIsProformaDialogOpen] = useState(false);
 
   const filteredProformas = mockProformas.filter((pf) => {
     if (activeTab === "customer" && pf.type !== "customer") return false;
@@ -78,7 +81,7 @@ export default function Proforma() {
             <FileText className="mr-2 h-4 w-4" />
             Modèles
           </Button>
-          <Button>
+          <Button onClick={() => setIsProformaDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nouveau Pro Forma
           </Button>
@@ -198,6 +201,15 @@ export default function Proforma() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isProformaDialogOpen} onOpenChange={setIsProformaDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouveau Pro Forma</DialogTitle>
+          </DialogHeader>
+          <InvoiceForm onSuccess={() => setIsProformaDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

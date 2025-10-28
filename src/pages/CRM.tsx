@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LeadForm } from "@/components/forms/LeadForm";
 import {
   Table,
   TableBody,
@@ -53,6 +55,7 @@ const stages = [
 
 export default function CRM() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -62,7 +65,7 @@ export default function CRM() {
           <h1 className="text-3xl font-bold text-foreground">CRM</h1>
           <p className="text-muted-foreground mt-1">Gestion de la relation client</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsLeadDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nouvelle Opportunité
         </Button>
@@ -138,6 +141,15 @@ export default function CRM() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isLeadDialogOpen} onOpenChange={setIsLeadDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouvelle Opportunité</DialogTitle>
+          </DialogHeader>
+          <LeadForm onSuccess={() => setIsLeadDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

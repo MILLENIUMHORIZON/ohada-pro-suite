@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProductForm } from "@/components/forms/ProductForm";
 import {
   Table,
   TableBody,
@@ -59,6 +61,7 @@ const stockStats = [
 export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("products");
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -77,7 +80,7 @@ export default function Stock() {
             <Search className="mr-2 h-4 w-4" />
             Inventaire
           </Button>
-          <Button>
+          <Button onClick={() => setIsProductDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nouvel Article
           </Button>
@@ -231,6 +234,15 @@ export default function Stock() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouvel Article</DialogTitle>
+          </DialogHeader>
+          <ProductForm onSuccess={() => setIsProductDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

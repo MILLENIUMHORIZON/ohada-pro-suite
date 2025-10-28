@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, AlertCircle, TrendingUp, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProductForm } from "@/components/forms/ProductForm";
 import {
   Table,
   TableBody,
@@ -77,6 +79,7 @@ const priorityConfig = {
 export default function Procurement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isProcurementDialogOpen, setIsProcurementDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -223,6 +226,15 @@ export default function Procurement() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isProcurementDialogOpen} onOpenChange={setIsProcurementDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouvelle Demande d'Approvisionnement</DialogTitle>
+          </DialogHeader>
+          <ProductForm onSuccess={() => setIsProcurementDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
