@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,15 +22,16 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const journalEntryFormSchema = z.object({
   date: z.string().min(1, "Date requise"),
-  journal: z.string().min(1, "Journal requis"),
+  journal_id: z.string().min(1, "Journal requis"),
   reference: z.string().optional(),
   description: z.string().min(1, "Description requise"),
-  account_debit: z.string().min(1, "Compte débit requis"),
-  account_credit: z.string().min(1, "Compte crédit requis"),
-  amount: z.string().min(1, "Montant requis"),
+  account_debit_id: z.string().min(1, "Compte débit requis"),
+  account_credit_id: z.string().min(1, "Compte crédit requis"),
+  amount: z.string().min(1, "Montant requis").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Montant invalide"),
 });
 
 type JournalEntryFormValues = z.infer<typeof journalEntryFormSchema>;
@@ -39,31 +41,120 @@ interface JournalEntryFormProps {
 }
 
 export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
+  const [journals, setJournals] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadJournalsAndAccounts();
+  }, []);
+
+  const loadJournalsAndAccounts = async () => {
+    try {
+      const [journalsRes, accountsRes] = await Promise.all([
+        supabase.from("journals").select("*").order("name"),
+        supabase.from("accounts").select("*").order("code"),
+      ]);
+
+      if (journalsRes.data) setJournals(journalsRes.data);
+      if (accountsRes.data) setAccounts(accountsRes.data);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast.error("Erreur lors du chargement des données");
+    }
+  };
+
   const form = useForm<JournalEntryFormValues>({
     resolver: zodResolver(journalEntryFormSchema),
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
-      journal: "",
+      journal_id: "",
       reference: "",
       description: "",
-      account_debit: "",
-      account_credit: "",
+      account_debit_id: "",
+      account_credit_id: "",
       amount: "",
     },
   });
 
   const onSubmit = async (data: JournalEntryFormValues) => {
+    setLoading(true);
     try {
-      // For now, just show success message
-      // In a real implementation, this would save to database
-      console.log("Journal entry data:", data);
-      
+      // Get user's company_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .single();
+
+      if (!profile?.company_id) {
+        throw new Error("Company not found");
+      }
+
+      // Generate entry number
+      const { data: lastMove } = await supabase
+        .from("account_moves")
+        .select("number")
+        .eq("company_id", profile.company_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const nextNumber = lastMove
+        ? `JE-${new Date().getFullYear()}-${String(parseInt(lastMove.number.split('-')[2]) + 1).padStart(4, '0')}`
+        : `JE-${new Date().getFullYear()}-0001`;
+
+      // Create account move
+      const { data: move, error: moveError } = await supabase
+        .from("account_moves")
+        .insert({
+          number: nextNumber,
+          date: data.date,
+          journal_id: data.journal_id,
+          ref: data.reference || null,
+          company_id: profile.company_id,
+          state: "draft",
+        })
+        .select()
+        .single();
+
+      if (moveError) throw moveError;
+
+      const amount = Number(data.amount);
+
+      // Create debit line
+      const { error: debitError } = await supabase
+        .from("account_move_lines")
+        .insert({
+          move_id: move.id,
+          account_id: data.account_debit_id,
+          debit: amount,
+          credit: 0,
+          currency: "CDF",
+        });
+
+      if (debitError) throw debitError;
+
+      // Create credit line
+      const { error: creditError } = await supabase
+        .from("account_move_lines")
+        .insert({
+          move_id: move.id,
+          account_id: data.account_credit_id,
+          debit: 0,
+          credit: amount,
+          currency: "CDF",
+        });
+
+      if (creditError) throw creditError;
+
       toast.success("Écriture comptable créée avec succès");
       form.reset();
       onSuccess?.();
     } catch (error) {
       console.error("Error creating journal entry:", error);
       toast.error("Erreur lors de la création de l'écriture");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,7 +178,7 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
 
           <FormField
             control={form.control}
-            name="journal"
+            name="journal_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Journal</FormLabel>
@@ -98,11 +189,11 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="sales">Ventes</SelectItem>
-                    <SelectItem value="purchases">Achats</SelectItem>
-                    <SelectItem value="bank">Banque</SelectItem>
-                    <SelectItem value="cash">Caisse</SelectItem>
-                    <SelectItem value="misc">Opérations Diverses</SelectItem>
+                    {journals.map((journal) => (
+                      <SelectItem key={journal.id} value={journal.id}>
+                        {journal.code} - {journal.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -145,13 +236,24 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
-            name="account_debit"
+            name="account_debit_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Compte Débit</FormLabel>
-                <FormControl>
-                  <Input placeholder="411000 - Clients" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un compte" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.code} - {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -159,13 +261,24 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
 
           <FormField
             control={form.control}
-            name="account_credit"
+            name="account_credit_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Compte Crédit</FormLabel>
-                <FormControl>
-                  <Input placeholder="701000 - Ventes" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un compte" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.code} - {account.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -192,7 +305,8 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         />
 
         <div className="flex justify-end gap-2">
-          <Button type="submit">
+          <Button type="submit" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Créer l'écriture
           </Button>
         </div>
