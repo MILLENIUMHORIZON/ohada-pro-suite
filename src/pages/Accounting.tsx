@@ -39,8 +39,7 @@ const accountingReports = [
   { name: "Balance Âgée", desc: "Clients et fournisseurs", icon: FileText },
   { name: "Bilan OHADA", desc: "Actif et Passif (système normal)", icon: FileText },
   { name: "Compte de Résultat", desc: "Produits et Charges (OHADA)", icon: FileText },
-  { name: "TFT", desc: "Tableau de Formation du Résultat (OHADA)", icon: FileText },
-  { name: "Tableau de Flux de Trésorerie", desc: "TAFIRE (OHADA)", icon: FileText },
+  { name: "TFT", desc: "Tableau de Flux de Trésorerie (OHADA)", icon: FileText },
   { name: "État Annexé", desc: "Notes et informations complémentaires", icon: FileText },
 ];
 
