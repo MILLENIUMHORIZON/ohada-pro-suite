@@ -15,6 +15,7 @@ import Accounting from "./pages/Accounting";
 import Settings from "./pages/Settings";
 import AccountActivation from "./pages/AccountActivation";
 import ManageActivationKeys from "./pages/ManageActivationKeys";
+import UserManagement from "./pages/UserManagement";
 import Proforma from "./pages/Proforma";
 import Procurement from "./pages/Procurement";
 import Auth from "./pages/Auth";
@@ -84,6 +85,7 @@ const App = () => {
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/activation" element={<AppLayout><AccountActivation /></AppLayout>} />
             <Route path="/manage-keys" element={<AppLayout><ManageActivationKeys /></AppLayout>} />
+            <Route path="/users" element={<AppLayout><UserManagement /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

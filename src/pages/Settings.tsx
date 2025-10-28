@@ -13,7 +13,7 @@ const settingsSections = [
     title: "Utilisateurs & Rôles",
     description: "Gestion des accès et permissions",
     icon: Users,
-    path: null,
+    path: "/users",
   },
   {
     title: "Activation du Compte",
