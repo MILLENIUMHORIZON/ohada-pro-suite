@@ -70,7 +70,7 @@ export default function CRM() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsClientDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nouveau Client
+            Nouveau Partenaire
           </Button>
           <Button onClick={() => setIsLeadDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -162,7 +162,7 @@ export default function CRM() {
       <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nouveau Client</DialogTitle>
+            <DialogTitle>Nouveau Partenaire</DialogTitle>
           </DialogHeader>
           <PartnerForm 
             onSuccess={() => setIsClientDialogOpen(false)}
