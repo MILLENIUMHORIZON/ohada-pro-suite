@@ -1,7 +1,9 @@
-import { Bell, Search, User, Plus, Keyboard } from "lucide-react";
+import { Bell, Search, User, Plus, Keyboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +23,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export const Header = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success("Déconnexion réussie");
+      navigate("/auth");
+    } catch (error: any) {
+      toast.error("Erreur lors de la déconnexion");
+    }
+  };
+
   const shortcuts = [
     { key: "⌘D", action: "Dashboard", path: "/" },
     { key: "⌘C", action: "CRM", path: "/crm" },
@@ -120,9 +135,32 @@ export const Header = () => {
           <Bell className="h-5 w-5" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <User className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <User className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/settings" className="cursor-pointer">
+                Paramètres
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/users" className="cursor-pointer">
+                Gestion des Utilisateurs
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+              <LogOut className="h-4 w-4 mr-2" />
+              Se déconnecter
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
