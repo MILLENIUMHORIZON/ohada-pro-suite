@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { JournalEntryForm } from "@/components/forms/JournalEntryForm";
 import { AccountForm } from "@/components/forms/AccountForm";
+import { JournalForm } from "@/components/forms/JournalForm";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Pencil } from "lucide-react";
 
 const mockJournalEntries = [
   {
@@ -70,7 +72,10 @@ const accountingReports = [
 export default function Accounting() {
   const [isJournalEntryDialogOpen, setIsJournalEntryDialogOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [isJournalDialogOpen, setIsJournalDialogOpen] = useState(false);
+  const [selectedJournalId, setSelectedJournalId] = useState<string | undefined>(undefined);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [journals, setJournals] = useState<any[]>([]);
 
   const loadAccounts = async () => {
     const { data } = await supabase
@@ -81,8 +86,29 @@ export default function Accounting() {
     if (data) setAccounts(data);
   };
 
+  const loadJournals = async () => {
+    const { data } = await supabase
+      .from("journals")
+      .select("*")
+      .order("code");
+    
+    if (data) setJournals(data);
+  };
+
+  const handleEditJournal = (journalId: string) => {
+    setSelectedJournalId(journalId);
+    setIsJournalDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsJournalDialogOpen(false);
+    setSelectedJournalId(undefined);
+    loadJournals();
+  };
+
   useEffect(() => {
     loadAccounts();
+    loadJournals();
   }, []);
 
   return (
@@ -159,6 +185,7 @@ export default function Accounting() {
       <Tabs defaultValue="entries" className="space-y-4">
         <TabsList>
           <TabsTrigger value="entries">Écritures Comptables</TabsTrigger>
+          <TabsTrigger value="journals">Journaux</TabsTrigger>
           <TabsTrigger value="accounts">Plan Comptable</TabsTrigger>
           <TabsTrigger value="reports">Rapports</TabsTrigger>
           <TabsTrigger value="taxes">TVA</TabsTrigger>
@@ -195,6 +222,61 @@ export default function Accounting() {
                         <Badge variant={entry.status === "posted" ? "default" : "secondary"}>
                           {entry.status === "posted" ? "Validée" : "Brouillon"}
                         </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="journals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Journaux Comptables</CardTitle>
+                <Button onClick={() => {
+                  setSelectedJournalId(undefined);
+                  setIsJournalDialogOpen(true);
+                }}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouveau Journal
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {journals.map((journal) => (
+                    <TableRow key={journal.id}>
+                      <TableCell className="font-mono">{journal.code}</TableCell>
+                      <TableCell>{journal.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {journal.type === 'sales' && 'Vente'}
+                          {journal.type === 'purchases' && 'Achat'}
+                          {journal.type === 'bank' && 'Banque'}
+                          {journal.type === 'cash' && 'Caisse'}
+                          {journal.type === 'misc' && 'Opérations Diverses'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditJournal(journal.id)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -337,6 +419,19 @@ export default function Accounting() {
             setIsAccountDialogOpen(false);
             loadAccounts();
           }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Journal Dialog */}
+      <Dialog open={isJournalDialogOpen} onOpenChange={setIsJournalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedJournalId ? "Modifier le journal" : "Nouveau Journal"}</DialogTitle>
+            <DialogDescription>
+              {selectedJournalId ? "Modifier les informations du journal" : "Créer un nouveau journal comptable"}
+            </DialogDescription>
+          </DialogHeader>
+          <JournalForm journalId={selectedJournalId} onSuccess={handleDialogClose} />
         </DialogContent>
       </Dialog>
     </div>
