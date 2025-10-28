@@ -14,6 +14,11 @@ import { JournalEntryForm } from "@/components/forms/JournalEntryForm";
 import { AccountForm } from "@/components/forms/AccountForm";
 import { JournalForm } from "@/components/forms/JournalForm";
 import { ChartOfAccountsImport } from "@/components/forms/ChartOfAccountsImport";
+import { BalanceGenerale } from "@/components/reports/BalanceGenerale";
+import { GrandLivre } from "@/components/reports/GrandLivre";
+import { BilanOHADA } from "@/components/reports/BilanOHADA";
+import { CompteResultat } from "@/components/reports/CompteResultat";
+import { BalanceAgee } from "@/components/reports/BalanceAgee";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -46,6 +51,7 @@ export default function Accounting() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [journals, setJournals] = useState<any[]>([]);
   const [moves, setMoves] = useState<any[]>([]);
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
 
   useEffect(() => {
     loadAccounts();
@@ -341,31 +347,55 @@ export default function Accounting() {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>États Financiers OHADA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {accountingReports.map((report) => {
-                  const Icon = report.icon;
-                  return (
-                    <button
-                      key={report.name}
-                      className="flex items-center gap-4 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent"
-                    >
-                      <Icon className="h-8 w-8 text-primary" />
-                      <div className="flex-1">
-                        <div className="font-semibold">{report.name}</div>
-                        <div className="text-sm text-muted-foreground">{report.desc}</div>
-                      </div>
-                      <Download className="h-5 w-5 text-muted-foreground" />
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          {!selectedReport ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>États Financiers OHADA</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {accountingReports.map((report) => {
+                    const Icon = report.icon;
+                    return (
+                      <button
+                        key={report.name}
+                        onClick={() => setSelectedReport(report.name)}
+                        className="flex items-center gap-4 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent"
+                      >
+                        <Icon className="h-8 w-8 text-primary" />
+                        <div className="flex-1">
+                          <div className="font-semibold">{report.name}</div>
+                          <div className="text-sm text-muted-foreground">{report.desc}</div>
+                        </div>
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <Button variant="outline" onClick={() => setSelectedReport(null)}>
+                ← Retour aux rapports
+              </Button>
+              {selectedReport === "Balance Générale" && <BalanceGenerale />}
+              {selectedReport === "Grand Livre" && <GrandLivre />}
+              {selectedReport === "Bilan OHADA" && <BilanOHADA />}
+              {selectedReport === "Compte de Résultat" && <CompteResultat />}
+              {selectedReport === "Balance Âgée" && <BalanceAgee />}
+              {!["Balance Générale", "Grand Livre", "Bilan OHADA", "Compte de Résultat", "Balance Âgée"].includes(selectedReport) && (
+                <Card>
+                  <CardContent className="py-12">
+                    <div className="text-center text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Ce rapport est en cours de développement</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="taxes" className="space-y-4">
