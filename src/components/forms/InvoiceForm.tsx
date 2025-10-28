@@ -35,7 +35,7 @@ const invoiceFormSchema = z.object({
   partner_id: z.string().min(1, "Le client est requis"),
   date: z.string().min(1, "La date est requise"),
   due_date: z.string().min(1, "L'échéance est requise"),
-  number: z.string().min(1, "Le numéro est requis"),
+  number: z.string().optional(),
   lines: z.array(invoiceLineSchema).min(1, "Au moins une ligne requise"),
 });
 
@@ -100,7 +100,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert([{
-          number: values.number,
+          number: values.number || null,
           partner_id: values.partner_id,
           date: values.date,
           due_date: values.due_date,
@@ -147,10 +147,10 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
             control={form.control}
             name="number"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Numéro *</FormLabel>
+          <FormItem>
+                <FormLabel>Numéro (généré automatiquement)</FormLabel>
                 <FormControl>
-                  <Input placeholder="FA-0001" {...field} />
+                  <Input placeholder="Auto-généré: FA-0001" {...field} disabled />
                 </FormControl>
                 <FormMessage />
               </FormItem>

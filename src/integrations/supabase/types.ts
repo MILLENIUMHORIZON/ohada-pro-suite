@@ -1730,6 +1730,10 @@ export type Database = {
         Args: { activation_key: string }
         Returns: Json
       }
+      get_next_sequence_number: {
+        Args: { p_code: string; p_company_id: string }
+        Returns: string
+      }
       get_user_company_id: { Args: never; Returns: string }
       has_role: {
         Args: {
