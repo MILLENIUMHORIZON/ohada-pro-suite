@@ -229,8 +229,11 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('fr-FR').format(totalAmount)} CDF
+            <div className="text-2xl font-bold font-mono">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(totalAmount)} CDF
             </div>
             <p className="text-xs text-muted-foreground mt-1">Ce mois</p>
           </CardContent>
@@ -242,8 +245,11 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('fr-FR').format(amountToPay)} CDF
+            <div className="text-2xl font-bold font-mono">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(amountToPay)} CDF
             </div>
             <p className="text-xs text-warning mt-1">
               {unpaidInvoices.length} facture{unpaidInvoices.length > 1 ? 's' : ''} en attente
@@ -257,8 +263,11 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('fr-FR').format(overdueAmount)} CDF
+            <div className="text-2xl font-bold font-mono">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(overdueAmount)} CDF
             </div>
             <p className="text-xs text-destructive mt-1">
               {overdueInvoices.length} facture{overdueInvoices.length > 1 ? 's' : ''} échue{overdueInvoices.length > 1 ? 's' : ''}
@@ -316,7 +325,12 @@ export default function Invoicing() {
                   <TableCell>{invoice.partner?.name}</TableCell>
                   <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
                   <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                  <TableCell className="font-semibold">{new Intl.NumberFormat('fr-FR').format(invoice.total_ttc)} {invoice.currency}</TableCell>
+                  <TableCell className="font-mono font-semibold">
+                    {new Intl.NumberFormat('fr-FR', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    }).format(invoice.total_ttc)} {invoice.currency}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
                       {statusConfig[invoice.status as keyof typeof statusConfig]?.label || invoice.status}

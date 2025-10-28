@@ -499,6 +499,66 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           ))}
         </div>
 
+        {/* Totaux */}
+        <div className="border-t pt-4 space-y-2">
+          <div className="flex justify-end gap-4 text-sm">
+            <span className="text-muted-foreground">Total HT:</span>
+            <span className="font-mono font-semibold min-w-[120px] text-right">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(
+                form.watch("lines").reduce((sum, line) => {
+                  const qty = parseFloat(line.qty || "0");
+                  const price = parseFloat(line.unit_price || "0");
+                  return sum + (qty * price);
+                }, 0)
+              )} CDF
+            </span>
+          </div>
+          <div className="flex justify-end gap-4 text-sm">
+            <span className="text-muted-foreground">TVA:</span>
+            <span className="font-mono font-semibold min-w-[120px] text-right">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(
+                form.watch("lines").reduce((sum, line) => {
+                  const qty = parseFloat(line.qty || "0");
+                  const price = parseFloat(line.unit_price || "0");
+                  const subtotal = qty * price;
+                  if (line.tax_id) {
+                    const tax = taxes.find(t => t.id === line.tax_id);
+                    return sum + (subtotal * (tax?.rate || 0) / 100);
+                  }
+                  return sum;
+                }, 0)
+              )} CDF
+            </span>
+          </div>
+          <div className="flex justify-end gap-4 text-lg border-t pt-2">
+            <span className="font-semibold">Total TTC:</span>
+            <span className="font-mono font-bold min-w-[120px] text-right text-primary">
+              {new Intl.NumberFormat('fr-FR', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              }).format(
+                form.watch("lines").reduce((sum, line) => {
+                  const qty = parseFloat(line.qty || "0");
+                  const price = parseFloat(line.unit_price || "0");
+                  const subtotal = qty * price;
+                  let taxAmount = 0;
+                  if (line.tax_id) {
+                    const tax = taxes.find(t => t.id === line.tax_id);
+                    taxAmount = subtotal * (tax?.rate || 0) / 100;
+                  }
+                  return sum + subtotal + taxAmount;
+                }, 0)
+              )} CDF
+            </span>
+          </div>
+        </div>
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Création..." : "Créer la facture"}
