@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Download } from "lucide-react";
+import { Plus, Search, FileText, Download, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
+import { supabase } from "@/integrations/supabase/client";
+import { generateInvoicePDF } from "@/utils/invoicePdfGenerator";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -62,6 +71,119 @@ export default function Invoicing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [company, setCompany] = useState<any>(null);
+
+  useEffect(() => {
+    loadInvoices();
+    loadCompany();
+  }, []);
+
+  const loadInvoices = async () => {
+    const { data } = await supabase
+      .from("invoices")
+      .select(`
+        *,
+        partner:partners(*),
+        lines:invoice_lines(*, product:products(*), tax:taxes(*))
+      `)
+      .order("date", { ascending: false });
+    
+    if (data) setInvoices(data);
+  };
+
+  const loadCompany = async () => {
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
+    if (profile?.company_id) {
+      const { data } = await supabase.from("companies").select("*").eq("id", profile.company_id).single();
+      if (data) setCompany(data);
+    }
+  };
+
+  const handleDownloadInvoice = async (invoice: any) => {
+    try {
+      const invoiceData = {
+        number: invoice.number,
+        date: invoice.date,
+        dueDate: invoice.due_date,
+        partner: {
+          name: invoice.partner.name,
+          address: invoice.partner.address,
+          phone: invoice.partner.phone,
+          email: invoice.partner.email,
+          nif: invoice.partner.nif,
+        },
+        company: {
+          name: company?.name || "Votre Entreprise",
+          address: company?.address,
+          phone: company?.phone,
+          email: company?.email,
+          nif: company?.nif,
+          rccm: company?.rccm,
+        },
+        lines: invoice.lines.map((line: any) => ({
+          description: line.product?.name || line.description || "",
+          quantity: line.qty,
+          unitPrice: line.unit_price,
+          taxRate: line.tax?.rate || 0,
+          subtotal: line.subtotal,
+        })),
+        totalHT: invoice.total_ht,
+        totalTax: invoice.total_tax,
+        totalTTC: invoice.total_ttc,
+        currency: invoice.currency,
+        notes: invoice.notes,
+      };
+
+      generateInvoicePDF(invoiceData, 'download');
+      toast.success("Facture téléchargée");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erreur lors de la génération du PDF");
+    }
+  };
+
+  const handlePrintInvoice = async (invoice: any) => {
+    try {
+      const invoiceData = {
+        number: invoice.number,
+        date: invoice.date,
+        dueDate: invoice.due_date,
+        partner: {
+          name: invoice.partner.name,
+          address: invoice.partner.address,
+          phone: invoice.partner.phone,
+          email: invoice.partner.email,
+          nif: invoice.partner.nif,
+        },
+        company: {
+          name: company?.name || "Votre Entreprise",
+          address: company?.address,
+          phone: company?.phone,
+          email: company?.email,
+          nif: company?.nif,
+          rccm: company?.rccm,
+        },
+        lines: invoice.lines.map((line: any) => ({
+          description: line.product?.name || line.description || "",
+          quantity: line.qty,
+          unitPrice: line.unit_price,
+          taxRate: line.tax?.rate || 0,
+          subtotal: line.subtotal,
+        })),
+        totalHT: invoice.total_ht,
+        totalTax: invoice.total_tax,
+        totalTTC: invoice.total_ttc,
+        currency: invoice.currency,
+        notes: invoice.notes,
+      };
+
+      generateInvoicePDF(invoiceData, 'print');
+    } catch (error) {
+      console.error("Error printing PDF:", error);
+      toast.error("Erreur lors de l'impression");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -174,25 +296,45 @@ export default function Invoicing() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockInvoices.map((invoice) => (
+              {invoices.length > 0 ? invoices.map((invoice) => (
                 <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{invoice.number}</TableCell>
-                  <TableCell>{invoice.partner}</TableCell>
+                  <TableCell>{invoice.partner?.name}</TableCell>
                   <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
-                  <TableCell>{new Date(invoice.dueDate).toLocaleDateString('fr-FR')}</TableCell>
-                  <TableCell className="font-semibold">{invoice.amount}</TableCell>
+                  <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                  <TableCell className="font-semibold">{new Intl.NumberFormat('fr-FR').format(invoice.total_ttc)} {invoice.currency}</TableCell>
                   <TableCell>
-                    <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig].variant}>
-                      {statusConfig[invoice.status as keyof typeof statusConfig].label}
+                    <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
+                      {statusConfig[invoice.status as keyof typeof statusConfig]?.label || invoice.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Télécharger PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePrintInvoice(invoice)}>
+                          <Printer className="mr-2 h-4 w-4" />
+                          Imprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Aucune facture trouvée
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -203,7 +345,10 @@ export default function Invoicing() {
           <DialogHeader>
             <DialogTitle>Nouvelle Facture</DialogTitle>
           </DialogHeader>
-          <InvoiceForm onSuccess={() => setIsInvoiceDialogOpen(false)} />
+          <InvoiceForm onSuccess={() => {
+            setIsInvoiceDialogOpen(false);
+            loadInvoices();
+          }} />
         </DialogContent>
       </Dialog>
     </div>
