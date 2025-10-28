@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/forms/LeadForm";
@@ -15,6 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const mockLeads = [
   {
@@ -58,6 +60,40 @@ export default function CRM() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<any>(null);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPartners();
+  }, []);
+
+  const loadPartners = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPartners(data || []);
+    } catch (error: any) {
+      toast.error("Erreur lors du chargement des partenaires");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditPartner = (partner: any) => {
+    setEditingPartner(partner);
+    setIsClientDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsClientDialogOpen(false);
+    setEditingPartner(null);
+    loadPartners();
+  };
 
   return (
     <div className="space-y-6">
@@ -94,21 +130,78 @@ export default function CRM() {
         ))}
       </div>
 
-      {/* Leads Table */}
+      {/* Partners Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Opportunités Actives</CardTitle>
+            <CardTitle>Partenaires</CardTitle>
             <div className="flex w-72 items-center gap-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher une opportunité..."
+                placeholder="Rechercher un partenaire..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="border-0 bg-muted/50"
               />
             </div>
           </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Chargement...</div>
+          ) : partners.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Aucun partenaire trouvé</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Téléphone</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>NIF</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {partners
+                  .filter((partner) =>
+                    partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    partner.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((partner) => (
+                    <TableRow key={partner.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">{partner.name}</TableCell>
+                      <TableCell>{partner.email || "-"}</TableCell>
+                      <TableCell>{partner.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {partner.type === "customer" ? "Client" : 
+                           partner.type === "vendor" ? "Fournisseur" : "Les deux"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{partner.nif || "-"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditPartner(partner)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Leads Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Opportunités Actives</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -159,14 +252,15 @@ export default function CRM() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+      <Dialog open={isClientDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nouveau Partenaire</DialogTitle>
+            <DialogTitle>{editingPartner ? "Modifier le Partenaire" : "Nouveau Partenaire"}</DialogTitle>
           </DialogHeader>
           <PartnerForm 
-            onSuccess={() => setIsClientDialogOpen(false)}
-            defaultValues={{ type: "customer" }}
+            partnerId={editingPartner?.id}
+            onSuccess={handleDialogClose}
+            defaultValues={editingPartner || { type: "customer" }}
           />
         </DialogContent>
       </Dialog>

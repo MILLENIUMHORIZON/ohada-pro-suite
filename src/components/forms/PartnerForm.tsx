@@ -39,9 +39,10 @@ type PartnerFormValues = z.infer<typeof partnerFormSchema>;
 interface PartnerFormProps {
   onSuccess?: () => void;
   defaultValues?: Partial<PartnerFormValues>;
+  partnerId?: string;
 }
 
-export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
+export function PartnerForm({ onSuccess, defaultValues, partnerId }: PartnerFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [accounts, setAccounts] = useState<Array<{ id: string; code: string; name: string }>>([]);
 
@@ -85,7 +86,7 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
         return;
       }
 
-      const { error } = await supabase.from("partners").insert([{
+      const partnerData = {
         name: values.name,
         email: values.email || null,
         phone: values.phone || null,
@@ -94,15 +95,29 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
         type: values.type,
         account_id: values.account_id || null,
         company_id: profile.company_id,
-      }]);
+      };
+
+      let error;
+      if (partnerId) {
+        // Update existing partner
+        ({ error } = await supabase
+          .from("partners")
+          .update(partnerData)
+          .eq("id", partnerId));
+      } else {
+        // Create new partner
+        ({ error } = await supabase
+          .from("partners")
+          .insert([partnerData]));
+      }
 
       if (error) throw error;
 
-      toast.success("Partenaire créé avec succès");
+      toast.success(partnerId ? "Partenaire modifié avec succès" : "Partenaire créé avec succès");
       form.reset();
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de la création");
+      toast.error(error.message || `Erreur lors de ${partnerId ? "la modification" : "la création"}`);
     } finally {
       setIsLoading(false);
     }
@@ -235,7 +250,9 @@ export function PartnerForm({ onSuccess, defaultValues }: PartnerFormProps) {
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Création..." : "Créer le partenaire"}
+            {isLoading 
+              ? (partnerId ? "Modification..." : "Création...") 
+              : (partnerId ? "Modifier le partenaire" : "Créer le partenaire")}
           </Button>
         </div>
       </form>
