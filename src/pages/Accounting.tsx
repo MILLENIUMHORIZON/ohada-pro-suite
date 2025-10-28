@@ -19,6 +19,7 @@ import { GrandLivre } from "@/components/reports/GrandLivre";
 import { BilanOHADA } from "@/components/reports/BilanOHADA";
 import { CompteResultat } from "@/components/reports/CompteResultat";
 import { BalanceAgee } from "@/components/reports/BalanceAgee";
+import { TFT } from "@/components/reports/TFT";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -32,12 +33,13 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil } from "lucide-react";
 
 const accountingReports = [
-  { name: "Balance Générale", desc: "Balance des comptes (OHADA)", icon: FileText },
+  { name: "Balance à 6 Colonnes", desc: "Soldes initiaux, mouvements et soldes finaux", icon: FileText },
   { name: "Grand Livre", desc: "Détail des écritures par compte", icon: FileText },
   { name: "Journaux Auxiliaires", desc: "Journal Ventes, Achats, Banque, OD", icon: FileText },
   { name: "Balance Âgée", desc: "Clients et fournisseurs", icon: FileText },
   { name: "Bilan OHADA", desc: "Actif et Passif (système normal)", icon: FileText },
   { name: "Compte de Résultat", desc: "Produits et Charges (OHADA)", icon: FileText },
+  { name: "TFT", desc: "Tableau de Formation du Résultat (OHADA)", icon: FileText },
   { name: "Tableau de Flux de Trésorerie", desc: "TAFIRE (OHADA)", icon: FileText },
   { name: "État Annexé", desc: "Notes et informations complémentaires", icon: FileText },
 ];
@@ -379,12 +381,13 @@ export default function Accounting() {
               <Button variant="outline" onClick={() => setSelectedReport(null)}>
                 ← Retour aux rapports
               </Button>
-              {selectedReport === "Balance Générale" && <BalanceGenerale />}
+              {selectedReport === "Balance à 6 Colonnes" && <BalanceGenerale />}
               {selectedReport === "Grand Livre" && <GrandLivre />}
               {selectedReport === "Bilan OHADA" && <BilanOHADA />}
               {selectedReport === "Compte de Résultat" && <CompteResultat />}
               {selectedReport === "Balance Âgée" && <BalanceAgee />}
-              {!["Balance Générale", "Grand Livre", "Bilan OHADA", "Compte de Résultat", "Balance Âgée"].includes(selectedReport) && (
+              {selectedReport === "TFT" && <TFT />}
+              {!["Balance à 6 Colonnes", "Grand Livre", "Bilan OHADA", "Compte de Résultat", "Balance Âgée", "TFT"].includes(selectedReport) && (
                 <Card>
                   <CardContent className="py-12">
                     <div className="text-center text-muted-foreground">
