@@ -476,6 +476,47 @@ export type Database = {
           },
         ]
       }
+      currencies: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string | null
+          id: string
+          is_base: boolean | null
+          name: string
+          rate: number
+          symbol: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+          is_base?: boolean | null
+          name: string
+          rate?: number
+          symbol: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          is_base?: boolean | null
+          name?: string
+          rate?: number
+          symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currencies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           created_at: string | null

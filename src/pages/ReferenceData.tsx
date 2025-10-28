@@ -28,13 +28,16 @@ export default function ReferenceData() {
   const [taxes, setTaxes] = useState<any[]>([]);
   const [uoms, setUoms] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
   const [isTaxDialogOpen, setIsTaxDialogOpen] = useState(false);
   const [isUomDialogOpen, setIsUomDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isCurrencyDialogOpen, setIsCurrencyDialogOpen] = useState(false);
 
   const taxForm = useForm();
   const uomForm = useForm();
   const categoryForm = useForm();
+  const currencyForm = useForm();
 
   const loadTaxes = async () => {
     const { data } = await supabase.from("taxes").select("*").order("name");
@@ -51,10 +54,16 @@ export default function ReferenceData() {
     if (data) setCategories(data);
   };
 
+  const loadCurrencies = async () => {
+    const { data } = await supabase.from("currencies").select("*").order("code");
+    if (data) setCurrencies(data);
+  };
+
   useEffect(() => {
     loadTaxes();
     loadUoms();
     loadCategories();
+    loadCurrencies();
   }, []);
 
   const handleTaxSubmit = async (formData: any) => {
@@ -114,6 +123,28 @@ export default function ReferenceData() {
     }
   };
 
+  const handleCurrencySubmit = async (formData: any) => {
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
+    
+    const { error } = await supabase.from("currencies").insert({
+      company_id: profile?.company_id,
+      code: formData.code.toUpperCase(),
+      name: formData.name,
+      symbol: formData.symbol,
+      rate: parseFloat(formData.rate),
+      is_base: formData.is_base === "true",
+    });
+
+    if (error) {
+      toast.error("Erreur lors de la création de la devise");
+    } else {
+      toast.success("Devise créée avec succès");
+      setIsCurrencyDialogOpen(false);
+      currencyForm.reset();
+      loadCurrencies();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -126,6 +157,7 @@ export default function ReferenceData() {
           <TabsTrigger value="taxes">Taxes</TabsTrigger>
           <TabsTrigger value="uom">Unités de Mesure</TabsTrigger>
           <TabsTrigger value="categories">Catégories de Produits</TabsTrigger>
+          <TabsTrigger value="currencies">Devises</TabsTrigger>
         </TabsList>
 
         <TabsContent value="taxes" className="space-y-4">
@@ -223,6 +255,44 @@ export default function ReferenceData() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="currencies" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Devises</CardTitle>
+                <Button onClick={() => setIsCurrencyDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvelle Devise
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Symbole</TableHead>
+                    <TableHead className="text-right">Taux de Change</TableHead>
+                    <TableHead>Devise de Base</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currencies.map((currency) => (
+                    <TableRow key={currency.id}>
+                      <TableCell className="font-mono font-semibold">{currency.code}</TableCell>
+                      <TableCell>{currency.name}</TableCell>
+                      <TableCell className="font-mono">{currency.symbol}</TableCell>
+                      <TableCell className="text-right font-mono">{currency.rate}</TableCell>
+                      <TableCell>{currency.is_base ? "✓" : ""}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Tax Dialog */}
@@ -295,6 +365,47 @@ export default function ReferenceData() {
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">Créer</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Currency Dialog */}
+      <Dialog open={isCurrencyDialogOpen} onOpenChange={setIsCurrencyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle Devise</DialogTitle>
+            <DialogDescription>Créer une nouvelle devise</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={currencyForm.handleSubmit(handleCurrencySubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currency-code">Code (ex: USD, EUR, CDF)</Label>
+              <Input id="currency-code" {...currencyForm.register("code")} required maxLength={3} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency-name">Nom</Label>
+              <Input id="currency-name" {...currencyForm.register("name")} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency-symbol">Symbole (ex: $, €, FC)</Label>
+              <Input id="currency-symbol" {...currencyForm.register("symbol")} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency-rate">Taux de Change</Label>
+              <Input id="currency-rate" type="number" step="0.0001" defaultValue="1.0" {...currencyForm.register("rate")} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency-is-base">Devise de Base</Label>
+              <select id="currency-is-base" {...currencyForm.register("is_base")} className="w-full rounded-md border border-input bg-background px-3 py-2">
+                <option value="false">Non</option>
+                <option value="true">Oui</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsCurrencyDialogOpen(false)}>
                 Annuler
               </Button>
               <Button type="submit">Créer</Button>
