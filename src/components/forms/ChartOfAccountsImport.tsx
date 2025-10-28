@@ -68,11 +68,18 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === 'text/csv') {
-      setFile(selectedFile);
-      setResult(null);
-    } else {
-      toast.error("Veuillez sélectionner un fichier CSV");
+    if (selectedFile) {
+      // Accept CSV files with various MIME types
+      const validTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain', 'application/csv'];
+      const isValidType = validTypes.includes(selectedFile.type) || selectedFile.name.endsWith('.csv');
+      
+      if (isValidType) {
+        setFile(selectedFile);
+        setResult(null);
+      } else {
+        toast.error("Veuillez sélectionner un fichier CSV valide");
+        e.target.value = ''; // Reset input
+      }
     }
   };
 
@@ -87,8 +94,12 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
     let successCount = 0;
 
     try {
+      console.log("🔄 Démarrage de l'import:", file.name);
       const text = await file.text();
+      console.log("📄 Fichier chargé, taille:", text.length, "caractères");
+      
       const accounts = parseCSV(text);
+      console.log("✅ Comptes parsés:", accounts.length);
 
       if (accounts.length === 0) {
         toast.error("Le fichier CSV est vide ou mal formaté");
@@ -97,16 +108,26 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
       }
 
       // Get user's company_id
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("company_id")
         .single();
 
-      if (!profile?.company_id) {
+      if (profileError) {
+        console.error("❌ Erreur profil:", profileError);
         toast.error("Impossible de récupérer les informations de la société");
         setIsProcessing(false);
         return;
       }
+
+      if (!profile?.company_id) {
+        console.error("❌ Pas de company_id");
+        toast.error("Impossible de récupérer les informations de la société");
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("🏢 Company ID:", profile.company_id);
 
       // Check for existing accounts to avoid duplicates
       const { data: existingAccounts } = await supabase
@@ -115,6 +136,7 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
         .eq("company_id", profile.company_id);
       
       const existingCodes = new Set(existingAccounts?.map(a => a.code) || []);
+      console.log("📊 Comptes existants:", existingCodes.size);
 
       // Import accounts one by one
       for (const account of accounts) {
@@ -147,15 +169,18 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
           });
 
           if (error) {
+            console.error(`❌ Erreur compte ${account.code}:`, error.message);
             errors.push(`Compte ${account.code}: ${error.message}`);
           } else {
             successCount++;
           }
         } catch (err: any) {
+          console.error(`❌ Exception compte ${account.code}:`, err);
           errors.push(`Compte ${account.code}: ${err.message || 'Erreur inconnue'}`);
         }
       }
 
+      console.log("✅ Import terminé:", successCount, "succès,", errors.length, "erreurs");
       setResult({ success: successCount, errors });
 
       if (successCount > 0) {
@@ -168,9 +193,9 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
       if (errors.length > 0) {
         toast.error(`${errors.length} erreur(s) lors de l'import`);
       }
-    } catch (error) {
-      console.error("Error importing accounts:", error);
-      toast.error("Erreur lors de l'import du fichier");
+    } catch (error: any) {
+      console.error("❌ Erreur globale import:", error);
+      toast.error(`Erreur lors de l'import: ${error.message || 'Erreur inconnue'}`);
     } finally {
       setIsProcessing(false);
     }
