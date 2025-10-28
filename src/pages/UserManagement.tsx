@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, User, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import ModulePermissions from "@/components/ModulePermissions";
 import {
   Collapsible,
@@ -43,6 +44,7 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     checkAdminStatus();
@@ -192,7 +194,23 @@ export default function UserManagement() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Utilisateurs</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Utilisateurs</CardTitle>
+              <CardDescription className="mt-1">
+                {users.length} utilisateur{users.length > 1 ? 's' : ''} dans votre entreprise
+              </CardDescription>
+            </div>
+            <div className="flex w-64 items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un utilisateur..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border-0 bg-muted/50"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -210,7 +228,12 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {users
+                  .filter((user) =>
+                    user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((user) => (
                   <Collapsible
                     key={user.id}
                     open={expandedUsers.has(user.user_id)}
