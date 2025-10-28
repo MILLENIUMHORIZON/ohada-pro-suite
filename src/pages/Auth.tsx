@@ -31,6 +31,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
   
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -101,6 +102,45 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = z.string().email("Email invalide").safeParse(loginEmail);
+
+      if (!result.success) {
+        toast({
+          title: "Email invalide",
+          description: "Veuillez saisir une adresse email valide",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(result.data, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email envoyé",
+        description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe",
+      });
+      setResetMode(false);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
         description: error.message,
         variant: "destructive",
       });
@@ -188,7 +228,7 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={resetMode ? handlePasswordReset : handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
                   <div className="relative">
@@ -204,24 +244,50 @@ export default function Auth() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+                {!resetMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Mot de passe</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setResetMode(true)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </button>
                   </div>
+                )}
+                {resetMode && (
+                  <p className="text-sm text-muted-foreground">
+                    Saisissez votre email pour recevoir un lien de réinitialisation
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (resetMode ? "Envoi..." : "Connexion...") : (resetMode ? "Envoyer le lien" : "Se connecter")}
+                  </Button>
+                  {resetMode && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="w-full" 
+                      onClick={() => setResetMode(false)}
+                    >
+                      Retour à la connexion
+                    </Button>
+                  )}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Connexion..." : "Se connecter"}
-                </Button>
               </form>
             </TabsContent>
             
