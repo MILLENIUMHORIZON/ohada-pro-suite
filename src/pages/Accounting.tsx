@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Download } from "lucide-react";
+import { Plus, FileText, Download, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
 import { JournalEntryForm } from "@/components/forms/JournalEntryForm";
 import { AccountForm } from "@/components/forms/AccountForm";
 import { JournalForm } from "@/components/forms/JournalForm";
+import { ChartOfAccountsImport } from "@/components/forms/ChartOfAccountsImport";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -73,6 +74,7 @@ export default function Accounting() {
   const [isJournalEntryDialogOpen, setIsJournalEntryDialogOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isJournalDialogOpen, setIsJournalDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedJournalId, setSelectedJournalId] = useState<string | undefined>(undefined);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [journals, setJournals] = useState<any[]>([]);
@@ -291,10 +293,16 @@ export default function Accounting() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Plan Comptable OHADA</CardTitle>
-                <Button onClick={() => setIsAccountDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouveau Compte
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importer
+                  </Button>
+                  <Button onClick={() => setIsAccountDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouveau Compte
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -432,6 +440,22 @@ export default function Accounting() {
             </DialogDescription>
           </DialogHeader>
           <JournalForm journalId={selectedJournalId} onSuccess={handleDialogClose} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importer le Plan Comptable</DialogTitle>
+            <DialogDescription>
+              Importer plusieurs comptes depuis un fichier CSV
+            </DialogDescription>
+          </DialogHeader>
+          <ChartOfAccountsImport onSuccess={() => {
+            setIsImportDialogOpen(false);
+            loadAccounts();
+          }} />
         </DialogContent>
       </Dialog>
     </div>
