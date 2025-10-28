@@ -1,49 +1,57 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Users, FileText, Package, DollarSign } from "lucide-react";
-
-const stats = [
-  {
-    name: "Chiffre d'Affaires",
-    value: "2,450,000 CDF",
-    change: "+12.5%",
-    trend: "up",
-    icon: DollarSign,
-    color: "text-success",
-  },
-  {
-    name: "Clients Actifs",
-    value: "1,234",
-    change: "+5.2%",
-    trend: "up",
-    icon: Users,
-    color: "text-primary",
-  },
-  {
-    name: "Factures en Cours",
-    value: "89",
-    change: "-3.1%",
-    trend: "down",
-    icon: FileText,
-    color: "text-warning",
-  },
-  {
-    name: "Articles en Stock",
-    value: "456",
-    change: "+8.7%",
-    trend: "up",
-    icon: Package,
-    color: "text-accent-foreground",
-  },
-];
-
-const recentActivities = [
-  { id: 1, type: "invoice", desc: "Facture FAC-2025-0045 créée", time: "Il y a 5 min" },
-  { id: 2, type: "payment", desc: "Paiement reçu de Client ABC", time: "Il y a 12 min" },
-  { id: 3, type: "lead", desc: "Nouvelle opportunité ajoutée", time: "Il y a 1h" },
-  { id: 4, type: "stock", desc: "Réception de marchandises", time: "Il y a 2h" },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
+  const [stats, setStats] = useState({
+    revenue: 0,
+    customers: 0,
+    invoices: 0,
+    products: 0,
+  });
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Load invoices
+    const { data: invoices } = await supabase
+      .from("invoices")
+      .select("total_ttc, date, status");
+    
+    const monthlyRevenue = (invoices || [])
+      .filter(inv => {
+        const invDate = new Date(inv.date);
+        return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, inv) => sum + (inv.total_ttc || 0), 0);
+
+    const pendingInvoices = (invoices || []).filter(inv => inv.status === 'posted').length;
+
+    // Load customers
+    const { data: customers } = await supabase
+      .from("partners")
+      .select("id")
+      .eq("type", "customer");
+
+    // Load products
+    const { data: products } = await supabase
+      .from("products")
+      .select("id")
+      .eq("active", true);
+
+    setStats({
+      revenue: monthlyRevenue,
+      customers: customers?.length || 0,
+      invoices: pendingInvoices,
+      products: products?.length || 0,
+    });
+  };
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -54,48 +62,87 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.name}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.name}
-                </CardTitle>
-                <Icon className={`h-5 w-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                  <TrendingUp className={`h-3 w-3 ${stat.trend === 'up' ? 'text-success' : 'text-destructive'}`} />
-                  <span className={stat.trend === 'up' ? 'text-success' : 'text-destructive'}>
-                    {stat.change}
-                  </span>
-                  <span>ce mois</span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Chiffre d'Affaires
+            </CardTitle>
+            <DollarSign className="h-5 w-5 text-success" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(stats.revenue)} CDF
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Ce mois</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Clients Actifs
+            </CardTitle>
+            <Users className="h-5 w-5 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.customers}</div>
+            <p className="text-xs text-muted-foreground mt-1">Partenaires clients</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Factures en Cours
+            </CardTitle>
+            <FileText className="h-5 w-5 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.invoices}</div>
+            <p className="text-xs text-muted-foreground mt-1">À encaisser</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Articles Actifs
+            </CardTitle>
+            <Package className="h-5 w-5 text-accent-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.products}</div>
+            <p className="text-xs text-muted-foreground mt-1">Produits</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activities */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Activités Récentes</CardTitle>
+            <CardTitle>Vue d'Ensemble</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="mt-0.5 h-2 w-2 rounded-full bg-primary" />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium">{activity.desc}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Chiffre d'affaires mensuel</span>
+                <span className="text-sm font-semibold">
+                  {new Intl.NumberFormat('fr-FR').format(stats.revenue)} CDF
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Clients enregistrés</span>
+                <span className="text-sm font-semibold">{stats.customers}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Factures en attente</span>
+                <span className="text-sm font-semibold">{stats.invoices}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Articles en catalogue</span>
+                <span className="text-sm font-semibold">{stats.products}</span>
+              </div>
             </div>
           </CardContent>
         </Card>

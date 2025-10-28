@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, ArrowUpDown, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/forms/ProductForm";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -15,53 +16,65 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-const mockProducts = [
-  {
-    id: 1,
-    sku: "PRD-001",
-    name: "Ordinateur Portable Dell XPS 15",
-    category: "Informatique",
-    stock: 45,
-    minStock: 20,
-    cost: "850,000 CDF",
-    price: "1,200,000 CDF",
-    status: "ok",
-  },
-  {
-    id: 2,
-    sku: "PRD-002",
-    name: "Imprimante HP LaserJet Pro",
-    category: "Bureautique",
-    stock: 12,
-    minStock: 15,
-    cost: "320,000 CDF",
-    price: "450,000 CDF",
-    status: "low",
-  },
-  {
-    id: 3,
-    sku: "PRD-003",
-    name: "Smartphone Samsung Galaxy S24",
-    category: "Téléphonie",
-    stock: 0,
-    minStock: 10,
-    cost: "620,000 CDF",
-    price: "890,000 CDF",
-    status: "out",
-  },
-];
-
-const stockStats = [
-  { label: "Articles en Stock", value: "456", color: "text-primary" },
-  { label: "Valeur Totale", value: "45M CDF", color: "text-success" },
-  { label: "Stock Faible", value: "23", color: "text-warning" },
-  { label: "Ruptures", value: "5", color: "text-destructive" },
-];
-
 export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("products");
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [inventories, setInventories] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalValue: 0,
+    lowStock: 0,
+    outOfStock: 0,
+  });
+
+  useEffect(() => {
+    loadProducts();
+    loadInventories();
+  }, []);
+
+  const loadProducts = async () => {
+    const { data } = await supabase
+      .from("products")
+      .select(`
+        *,
+        category:product_categories(name),
+        uom:uom(code),
+        tax:taxes(rate)
+      `)
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    
+    if (data) {
+      setProducts(data);
+      
+      // Calculate stats
+      const totalValue = data.reduce((sum, p) => sum + ((p.cost_price || 0) * 10), 0); // Estimé
+      const lowStock = data.filter(p => false).length; // À implémenter avec stock_quants
+      const outOfStock = data.filter(p => false).length; // À implémenter avec stock_quants
+      
+      setStats({
+        totalProducts: data.length,
+        totalValue,
+        lowStock,
+        outOfStock,
+      });
+    }
+  };
+
+  const loadInventories = async () => {
+    const { data } = await supabase
+      .from("stock_inventories")
+      .select(`
+        *,
+        location:stock_locations(name)
+      `)
+      .order("date", { ascending: false })
+      .limit(10);
+    
+    if (data) setInventories(data);
+  };
 
   return (
     <div className="space-y-6">
@@ -89,18 +102,48 @@ export default function Stock() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        {stockStats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Articles en Stock
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{stats.totalProducts}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Valeur Totale
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">
+              {new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(stats.totalValue)} CDF
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Stock Faible
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{stats.lowStock}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ruptures
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{stats.outOfStock}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Products Table with Tabs */}
@@ -156,35 +199,31 @@ export default function Stock() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockProducts.map((product) => (
+              {products.length > 0 ? products.map((product) => (
                 <TableRow key={product.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{product.category}</TableCell>
+                  <TableCell className="text-muted-foreground">{product.category?.name || '-'}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{product.stock}</span>
-                      <span className="text-xs text-muted-foreground">
-                        / {product.minStock} min
-                      </span>
-                    </div>
+                    <span className="text-sm text-muted-foreground">N/A</span>
                   </TableCell>
-                  <TableCell>{product.cost}</TableCell>
-                  <TableCell className="font-semibold">{product.price}</TableCell>
                   <TableCell>
-                    {product.status === "ok" && <Badge>En Stock</Badge>}
-                    {product.status === "low" && (
-                      <Badge variant="secondary" className="bg-warning/20 text-warning-foreground">
-                        <AlertTriangle className="mr-1 h-3 w-3" />
-                        Faible
-                      </Badge>
-                    )}
-                    {product.status === "out" && (
-                      <Badge variant="destructive">Rupture</Badge>
-                    )}
+                    {new Intl.NumberFormat('fr-FR').format(product.cost_price || 0)} CDF
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {new Intl.NumberFormat('fr-FR').format(product.unit_price || 0)} CDF
+                  </TableCell>
+                  <TableCell>
+                    <Badge>{product.active ? 'Actif' : 'Inactif'}</Badge>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    Aucun produit enregistré
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
           )}
@@ -203,32 +242,27 @@ export default function Stock() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">INV-2025-0001</TableCell>
-                  <TableCell>Inventaire Janvier 2025</TableCell>
-                  <TableCell>Entrepôt Principal</TableCell>
-                  <TableCell>15/01/2025</TableCell>
-                  <TableCell>156 articles</TableCell>
-                  <TableCell>
-                    <span className="text-warning font-semibold">-12 unités</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge>Terminé</Badge>
-                  </TableCell>
-                </TableRow>
-                <TableRow className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">INV-2025-0002</TableCell>
-                  <TableCell>Inventaire Tournant Zone A</TableCell>
-                  <TableCell>Zone A - Étagère 1-5</TableCell>
-                  <TableCell>18/01/2025</TableCell>
-                  <TableCell>45 articles</TableCell>
-                  <TableCell>
-                    <span className="text-success font-semibold">+3 unités</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">En cours</Badge>
-                  </TableCell>
-                </TableRow>
+                {inventories.length > 0 ? inventories.map((inv) => (
+                  <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-medium">{inv.number}</TableCell>
+                    <TableCell>{inv.name}</TableCell>
+                    <TableCell>{inv.location?.name || '-'}</TableCell>
+                    <TableCell>{new Date(inv.date).toLocaleDateString('fr-FR')}</TableCell>
+                    <TableCell>-</TableCell>
+                    <TableCell>-</TableCell>
+                    <TableCell>
+                      <Badge variant={inv.state === 'draft' ? 'secondary' : 'default'}>
+                        {inv.state === 'draft' ? 'Brouillon' : inv.state}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      Aucun inventaire enregistré
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}
@@ -240,7 +274,10 @@ export default function Stock() {
           <DialogHeader>
             <DialogTitle>Nouvel Article</DialogTitle>
           </DialogHeader>
-          <ProductForm onSuccess={() => setIsProductDialogOpen(false)} />
+          <ProductForm onSuccess={() => {
+            setIsProductDialogOpen(false);
+            loadProducts();
+          }} />
         </DialogContent>
       </Dialog>
     </div>

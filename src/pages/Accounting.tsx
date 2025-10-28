@@ -26,39 +26,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Pencil } from "lucide-react";
 
-const mockJournalEntries = [
-  {
-    id: 1,
-    number: "JE-2025-0012",
-    date: "2025-01-15",
-    journal: "Ventes",
-    ref: "FAC-2025-0045",
-    debit: "1,250,000",
-    credit: "1,250,000",
-    status: "posted",
-  },
-  {
-    id: 2,
-    number: "JE-2025-0011",
-    date: "2025-01-14",
-    journal: "Banque",
-    ref: "PAY-2025-0032",
-    debit: "3,450,000",
-    credit: "3,450,000",
-    status: "posted",
-  },
-  {
-    id: 3,
-    number: "JE-2025-0010",
-    date: "2025-01-13",
-    journal: "Achats",
-    ref: "BILL-2025-0018",
-    debit: "875,000",
-    credit: "875,000",
-    status: "draft",
-  },
-];
-
 const accountingReports = [
   { name: "Balance Générale", desc: "Balance des comptes (OHADA)", icon: FileText },
   { name: "Grand Livre", desc: "Détail des écritures par compte", icon: FileText },
@@ -78,6 +45,13 @@ export default function Accounting() {
   const [selectedJournalId, setSelectedJournalId] = useState<string | undefined>(undefined);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [journals, setJournals] = useState<any[]>([]);
+  const [moves, setMoves] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadAccounts();
+    loadJournals();
+    loadMoves();
+  }, []);
 
   const loadAccounts = async () => {
     const { data } = await supabase
@@ -97,6 +71,19 @@ export default function Accounting() {
     if (data) setJournals(data);
   };
 
+  const loadMoves = async () => {
+    const { data } = await supabase
+      .from("account_moves")
+      .select(`
+        *,
+        journal:journals(name)
+      `)
+      .order("date", { ascending: false })
+      .limit(10);
+    
+    if (data) setMoves(data);
+  };
+
   const handleEditJournal = (journalId: string) => {
     setSelectedJournalId(journalId);
     setIsJournalDialogOpen(true);
@@ -111,6 +98,7 @@ export default function Accounting() {
   useEffect(() => {
     loadAccounts();
     loadJournals();
+    loadMoves();
   }, []);
 
   return (
@@ -212,21 +200,27 @@ export default function Accounting() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockJournalEntries.map((entry) => (
+                  {moves.length > 0 ? moves.map((entry) => (
                     <TableRow key={entry.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-medium">{entry.number}</TableCell>
                       <TableCell>{new Date(entry.date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{entry.journal}</TableCell>
-                      <TableCell className="text-muted-foreground">{entry.ref}</TableCell>
-                      <TableCell className="text-right font-mono">{entry.debit} CDF</TableCell>
-                      <TableCell className="text-right font-mono">{entry.credit} CDF</TableCell>
+                      <TableCell>{entry.journal?.name || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{entry.ref || '-'}</TableCell>
+                      <TableCell className="text-right font-mono">-</TableCell>
+                      <TableCell className="text-right font-mono">-</TableCell>
                       <TableCell>
-                        <Badge variant={entry.status === "posted" ? "default" : "secondary"}>
-                          {entry.status === "posted" ? "Validée" : "Brouillon"}
+                        <Badge variant={entry.state === "posted" ? "default" : "secondary"}>
+                          {entry.state === "posted" ? "Validée" : "Brouillon"}
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Aucune écriture comptable enregistrée
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

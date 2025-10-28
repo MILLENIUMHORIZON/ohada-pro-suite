@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, AlertCircle, TrendingUp, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/forms/ProductForm";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -21,45 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const mockProcurements = [
-  {
-    id: 1,
-    number: "APP-2025-0012",
-    product: "Ordinateur Portable Dell XPS",
-    supplier: "Tech Supplier Ltd",
-    qtyNeeded: 15,
-    qtyOrdered: 15,
-    qtyReceived: 10,
-    dateNeeded: "2025-01-20",
-    priority: "high",
-    status: "partial",
-  },
-  {
-    id: 2,
-    number: "APP-2025-0011",
-    product: "Imprimante HP LaserJet",
-    supplier: "Office Supplies Co",
-    qtyNeeded: 8,
-    qtyOrdered: 8,
-    qtyReceived: 8,
-    dateNeeded: "2025-01-18",
-    priority: "normal",
-    status: "done",
-  },
-  {
-    id: 3,
-    number: "APP-2025-0010",
-    product: "Papier A4 (Ramettes)",
-    supplier: null,
-    qtyNeeded: 50,
-    qtyOrdered: 0,
-    qtyReceived: 0,
-    dateNeeded: "2025-01-25",
-    priority: "urgent",
-    status: "draft",
-  },
-];
 
 const statusConfig = {
   draft: { label: "Brouillon", variant: "secondary" as const },
@@ -80,6 +42,41 @@ export default function Procurement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isProcurementDialogOpen, setIsProcurementDialogOpen] = useState(false);
+  const [procurements, setProcurements] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadProcurements();
+  }, []);
+
+  const loadProcurements = async () => {
+    const { data } = await supabase
+      .from("procurements")
+      .select(`
+        *,
+        product:products(name),
+        supplier:partners(name)
+      `)
+      .order("date_needed", { ascending: true });
+    
+    if (data) setProcurements(data);
+  };
+
+  const filteredProcurements = procurements.filter(proc => {
+    const matchesStatus = statusFilter === "all" || proc.status === statusFilter;
+    const matchesSearch = 
+      proc.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      proc.product?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const stats = {
+    pending: procurements.filter(p => p.status === 'draft').length,
+    inProgress: procurements.filter(p => p.status === 'ordered' || p.status === 'partial').length,
+    urgent: procurements.filter(p => p.priority === 'urgent').length,
+    completionRate: procurements.length > 0 
+      ? Math.round((procurements.filter(p => p.status === 'done').length / procurements.length) * 100)
+      : 0,
+  };
 
   return (
     <div className="space-y-6">
@@ -110,7 +107,7 @@ export default function Procurement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23</div>
+            <div className="text-2xl font-bold">{stats.pending}</div>
             <p className="text-xs text-muted-foreground mt-1">Besoins à commander</p>
           </CardContent>
         </Card>
@@ -121,7 +118,7 @@ export default function Procurement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">15</div>
+            <div className="text-2xl font-bold text-warning">{stats.inProgress}</div>
             <p className="text-xs text-muted-foreground mt-1">Commandes en livraison</p>
           </CardContent>
         </Card>
@@ -132,7 +129,7 @@ export default function Procurement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">7</div>
+            <div className="text-2xl font-bold text-destructive">{stats.urgent}</div>
             <p className="text-xs text-muted-foreground mt-1">À traiter rapidement</p>
           </CardContent>
         </Card>
@@ -143,8 +140,8 @@ export default function Procurement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">94%</div>
-            <p className="text-xs text-success mt-1">+3% ce mois</p>
+            <div className="text-2xl font-bold text-success">{stats.completionRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Complétés</p>
           </CardContent>
         </Card>
       </div>
@@ -195,33 +192,41 @@ export default function Procurement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockProcurements.map((proc) => {
-                const PriorityIcon = priorityConfig[proc.priority as keyof typeof priorityConfig].icon;
+              {filteredProcurements.length > 0 ? filteredProcurements.map((proc) => {
+                const PriorityIcon = priorityConfig[proc.priority as keyof typeof priorityConfig]?.icon || Package;
                 return (
                   <TableRow key={proc.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium">{proc.number}</TableCell>
-                    <TableCell>{proc.product}</TableCell>
+                    <TableCell>{proc.product?.name || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {proc.supplier || <span className="text-warning">Non défini</span>}
+                      {proc.supplier?.name || <span className="text-warning">Non défini</span>}
                     </TableCell>
-                    <TableCell className="text-center font-semibold">{proc.qtyNeeded}</TableCell>
-                    <TableCell className="text-center">{proc.qtyOrdered}</TableCell>
-                    <TableCell className="text-center">{proc.qtyReceived}</TableCell>
-                    <TableCell>{new Date(proc.dateNeeded).toLocaleDateString('fr-FR')}</TableCell>
+                    <TableCell className="text-center font-semibold">{proc.qty_needed}</TableCell>
+                    <TableCell className="text-center">{proc.qty_ordered || 0}</TableCell>
+                    <TableCell className="text-center">{proc.qty_received || 0}</TableCell>
+                    <TableCell>{new Date(proc.date_needed).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>
-                      <Badge variant={priorityConfig[proc.priority as keyof typeof priorityConfig].variant}>
+                      <Badge variant={priorityConfig[proc.priority as keyof typeof priorityConfig]?.variant || "outline"}>
                         <PriorityIcon className="mr-1 h-3 w-3" />
-                        {priorityConfig[proc.priority as keyof typeof priorityConfig].label}
+                        {priorityConfig[proc.priority as keyof typeof priorityConfig]?.label || proc.priority}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusConfig[proc.status as keyof typeof statusConfig].variant}>
-                        {statusConfig[proc.status as keyof typeof statusConfig].label}
+                      <Badge variant={statusConfig[proc.status as keyof typeof statusConfig]?.variant || "secondary"}>
+                        {statusConfig[proc.status as keyof typeof statusConfig]?.label || proc.status}
                       </Badge>
                     </TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    {procurements.length === 0 
+                      ? "Aucune demande d'approvisionnement"
+                      : "Aucune demande ne correspond à votre recherche"}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

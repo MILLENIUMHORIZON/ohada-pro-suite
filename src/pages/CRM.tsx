@@ -18,54 +18,20 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const mockLeads = [
-  {
-    id: 1,
-    title: "Nouveau prospect - Entreprise ABC",
-    partner: "Entreprise ABC",
-    stage: "Qualification",
-    revenue: "500,000 CDF",
-    probability: 60,
-    owner: "Jean Dupont",
-  },
-  {
-    id: 2,
-    title: "Opportunité système ERP",
-    partner: "Tech Solutions",
-    stage: "Proposition",
-    revenue: "1,200,000 CDF",
-    probability: 75,
-    owner: "Marie Martin",
-  },
-  {
-    id: 3,
-    title: "Renouvellement contrat",
-    partner: "Industries XYZ",
-    stage: "Négociation",
-    revenue: "850,000 CDF",
-    probability: 85,
-    owner: "Jean Dupont",
-  },
-];
-
-const stages = [
-  { name: "Nouveau", count: 12, color: "bg-muted" },
-  { name: "Qualification", count: 8, color: "bg-primary/20" },
-  { name: "Proposition", count: 5, color: "bg-warning/20" },
-  { name: "Négociation", count: 3, color: "bg-success/20" },
-  { name: "Gagné", count: 24, color: "bg-success" },
-];
-
 export default function CRM() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<any>(null);
   const [partners, setPartners] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [stages, setStages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadPartners();
+    loadLeads();
+    loadStages();
   }, []);
 
   const loadPartners = async () => {
@@ -81,6 +47,35 @@ export default function CRM() {
       toast.error("Erreur lors du chargement des partenaires");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadLeads = async () => {
+    const { data } = await supabase
+      .from("crm_leads")
+      .select(`
+        *,
+        partner:partners(name),
+        stage:crm_stages(name),
+        owner:profiles!crm_leads_owner_id_fkey(full_name)
+      `)
+      .order("created_at", { ascending: false });
+    
+    if (data) setLeads(data);
+  };
+
+  const loadStages = async () => {
+    const { data: stagesData } = await supabase
+      .from("crm_stages")
+      .select("*, leads:crm_leads(count)")
+      .order("order_seq");
+    
+    if (stagesData) {
+      setStages(stagesData.map((stage: any) => ({
+        name: stage.name,
+        count: stage.leads?.length || 0,
+        color: stage.won_flag ? "bg-success" : "bg-primary/20",
+      })));
     }
   };
 
@@ -216,28 +211,36 @@ export default function CRM() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockLeads.map((lead) => (
+              {leads.length > 0 ? leads.map((lead) => (
                 <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{lead.title}</TableCell>
-                  <TableCell>{lead.partner}</TableCell>
+                  <TableCell>{lead.partner?.name || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{lead.stage}</Badge>
+                    <Badge variant="secondary">{lead.stage?.name || '-'}</Badge>
                   </TableCell>
-                  <TableCell>{lead.revenue}</TableCell>
+                  <TableCell>
+                    {new Intl.NumberFormat('fr-FR').format(lead.expected_revenue || 0)} CDF
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-20 rounded-full bg-muted">
                         <div
                           className="h-full rounded-full bg-success"
-                          style={{ width: `${lead.probability}%` }}
+                          style={{ width: `${lead.probability || 0}%` }}
                         />
                       </div>
-                      <span className="text-sm">{lead.probability}%</span>
+                      <span className="text-sm">{lead.probability || 0}%</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{lead.owner}</TableCell>
+                  <TableCell className="text-muted-foreground">{lead.owner?.full_name || '-'}</TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    Aucune opportunité enregistrée
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -248,7 +251,11 @@ export default function CRM() {
           <DialogHeader>
             <DialogTitle>Nouvelle Opportunité</DialogTitle>
           </DialogHeader>
-          <LeadForm onSuccess={() => setIsLeadDialogOpen(false)} />
+          <LeadForm onSuccess={() => {
+            setIsLeadDialogOpen(false);
+            loadLeads();
+            loadStages();
+          }} />
         </DialogContent>
       </Dialog>
 

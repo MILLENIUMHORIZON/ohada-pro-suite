@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, FileText, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -15,39 +16,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const mockProformas = [
-  {
-    id: 1,
-    number: "PRO-2025-0001",
-    type: "customer",
-    partner: "Entreprise ABC",
-    date: "2025-01-15",
-    validUntil: "2025-02-15",
-    amount: "2,500,000 CDF",
-    status: "sent",
-  },
-  {
-    id: 2,
-    number: "PRO-2025-0002",
-    type: "supplier",
-    partner: "Fournisseur XYZ",
-    date: "2025-01-14",
-    validUntil: "2025-02-14",
-    amount: "1,800,000 CDF",
-    status: "accepted",
-  },
-  {
-    id: 3,
-    number: "PRO-2025-0003",
-    type: "customer",
-    partner: "Tech Solutions",
-    date: "2025-01-13",
-    validUntil: "2025-02-13",
-    amount: "4,200,000 CDF",
-    status: "draft",
-  },
-];
 
 const statusConfig = {
   draft: { label: "Brouillon", variant: "secondary" as const },
@@ -61,12 +29,41 @@ export default function Proforma() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [isProformaDialogOpen, setIsProformaDialogOpen] = useState(false);
+  const [proformas, setProformas] = useState<any[]>([]);
 
-  const filteredProformas = mockProformas.filter((pf) => {
+  useEffect(() => {
+    loadProformas();
+  }, []);
+
+  const loadProformas = async () => {
+    const { data } = await supabase
+      .from("proformas")
+      .select(`
+        *,
+        partner:partners(name)
+      `)
+      .order("date", { ascending: false });
+    
+    if (data) setProformas(data);
+  };
+
+  const filteredProformas = proformas.filter((pf) => {
     if (activeTab === "customer" && pf.type !== "customer") return false;
     if (activeTab === "supplier" && pf.type !== "supplier") return false;
-    return true;
+    
+    const matchesSearch = 
+      pf.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pf.partner?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesSearch;
   });
+
+  const stats = {
+    total: proformas.length,
+    pending: proformas.filter(p => p.status === 'sent').length,
+    accepted: proformas.filter(p => p.status === 'accepted').length,
+    totalAmount: proformas.reduce((sum, p) => sum + (p.total_ttc || 0), 0),
+  };
 
   return (
     <div className="space-y-6">
@@ -97,8 +94,8 @@ export default function Proforma() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">124</div>
-            <p className="text-xs text-muted-foreground mt-1">+8 cette semaine</p>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">Enregistrés</p>
           </CardContent>
         </Card>
         <Card>
@@ -108,7 +105,7 @@ export default function Proforma() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">28</div>
+            <div className="text-2xl font-bold text-warning">{stats.pending}</div>
             <p className="text-xs text-muted-foreground mt-1">À traiter</p>
           </CardContent>
         </Card>
@@ -119,8 +116,10 @@ export default function Proforma() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">67</div>
-            <p className="text-xs text-muted-foreground mt-1">54% taux acceptation</p>
+            <div className="text-2xl font-bold text-success">{stats.accepted}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0}% taux acceptation
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -130,8 +129,10 @@ export default function Proforma() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">38M CDF</div>
-            <p className="text-xs text-success mt-1">+22% vs mois dernier</p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(stats.totalAmount)} CDF
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Valeur cumulée</p>
           </CardContent>
         </Card>
       </div>
@@ -173,7 +174,7 @@ export default function Proforma() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProformas.map((proforma) => (
+              {filteredProformas.length > 0 ? filteredProformas.map((proforma) => (
                 <TableRow key={proforma.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{proforma.number}</TableCell>
                   <TableCell>
@@ -181,13 +182,17 @@ export default function Proforma() {
                       {proforma.type === "customer" ? "Client" : "Fournisseur"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{proforma.partner}</TableCell>
+                  <TableCell>{proforma.partner?.name || '-'}</TableCell>
                   <TableCell>{new Date(proforma.date).toLocaleDateString('fr-FR')}</TableCell>
-                  <TableCell>{new Date(proforma.validUntil).toLocaleDateString('fr-FR')}</TableCell>
-                  <TableCell className="font-semibold">{proforma.amount}</TableCell>
                   <TableCell>
-                    <Badge variant={statusConfig[proforma.status as keyof typeof statusConfig].variant}>
-                      {statusConfig[proforma.status as keyof typeof statusConfig].label}
+                    {proforma.valid_until ? new Date(proforma.valid_until).toLocaleDateString('fr-FR') : '-'}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {new Intl.NumberFormat('fr-FR').format(proforma.total_ttc || 0)} {proforma.currency}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusConfig[proforma.status as keyof typeof statusConfig]?.variant || "secondary"}>
+                      {statusConfig[proforma.status as keyof typeof statusConfig]?.label || proforma.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -196,7 +201,15 @@ export default function Proforma() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    {proformas.length === 0 
+                      ? "Aucun pro forma enregistré"
+                      : "Aucun pro forma ne correspond à votre recherche"}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -207,7 +220,10 @@ export default function Proforma() {
           <DialogHeader>
             <DialogTitle>Nouveau Pro Forma</DialogTitle>
           </DialogHeader>
-          <InvoiceForm onSuccess={() => setIsProformaDialogOpen(false)} />
+          <InvoiceForm onSuccess={() => {
+            setIsProformaDialogOpen(false);
+            loadProformas();
+          }} />
         </DialogContent>
       </Dialog>
     </div>
