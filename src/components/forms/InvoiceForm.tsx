@@ -96,7 +96,46 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         return;
       }
 
-      // Créer la facture
+      // Calculer les totaux
+      let totalHT = 0;
+      let totalTax = 0;
+
+      const linesWithTotals = await Promise.all(
+        values.lines.map(async (line) => {
+          const qty = parseFloat(line.qty);
+          const unitPrice = parseFloat(line.unit_price);
+          const subtotal = qty * unitPrice;
+          totalHT += subtotal;
+
+          let taxAmount = 0;
+          if (line.tax_id) {
+            const { data: tax } = await supabase
+              .from("taxes")
+              .select("rate")
+              .eq("id", line.tax_id)
+              .single();
+            
+            if (tax) {
+              taxAmount = (subtotal * tax.rate) / 100;
+              totalTax += taxAmount;
+            }
+          }
+
+          return {
+            invoice_id: "",
+            product_id: line.product_id,
+            description: line.description || null,
+            qty,
+            unit_price: unitPrice,
+            tax_id: line.tax_id || null,
+            subtotal,
+          };
+        })
+      );
+
+      const totalTTC = totalHT + totalTax;
+
+      // Créer la facture avec les totaux
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert([{
@@ -106,6 +145,9 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
           due_date: values.due_date,
           status: "draft",
           type: "customer",
+          total_ht: totalHT,
+          total_tax: totalTax,
+          total_ttc: totalTTC,
         }])
         .select()
         .single();
@@ -113,14 +155,9 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       if (invoiceError) throw invoiceError;
 
       // Créer les lignes
-      const lines = values.lines.map(line => ({
+      const lines = linesWithTotals.map((line) => ({
+        ...line,
         invoice_id: invoice.id,
-        product_id: line.product_id,
-        description: line.description || null,
-        qty: parseFloat(line.qty),
-        unit_price: parseFloat(line.unit_price),
-        tax_id: line.tax_id || null,
-        subtotal: parseFloat(line.qty) * parseFloat(line.unit_price),
       }));
 
       const { error: linesError } = await supabase
@@ -129,13 +166,121 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       if (linesError) throw linesError;
 
-      toast.success("Facture créée avec succès");
+      // Créer les écritures comptables
+      await createAccountingEntries(
+        invoice,
+        values.partner_id,
+        totalHT,
+        totalTax,
+        totalTTC,
+        profile.company_id
+      );
+
+      toast.success("Facture et écritures comptables créées avec succès");
       form.reset();
       onSuccess?.();
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la création");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const createAccountingEntries = async (
+    invoice: any,
+    partnerId: string,
+    totalHT: number,
+    totalTax: number,
+    totalTTC: number,
+    companyId: string
+  ) => {
+    try {
+      // Récupérer le compte client du partenaire
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("account_id")
+        .eq("id", partnerId)
+        .single();
+
+      if (!partner?.account_id) {
+        console.error("Compte client non trouvé");
+        return;
+      }
+
+      // Récupérer le journal de ventes
+      const { data: salesJournal } = await supabase
+        .from("journals")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("type", "sales")
+        .single();
+
+      if (!salesJournal) {
+        console.error("Journal de ventes non trouvé");
+        return;
+      }
+
+      // Récupérer les comptes de vente et TVA
+      const { data: accounts } = await supabase
+        .from("accounts")
+        .select("id, code")
+        .eq("company_id", companyId)
+        .in("code", ["707000", "445710"]);
+
+      const salesAccount = accounts?.find((a) => a.code === "707000");
+      const taxAccount = accounts?.find((a) => a.code === "445710");
+
+      if (!salesAccount) {
+        console.error("Compte de vente (707000) non trouvé");
+        return;
+      }
+
+      // Créer l'écriture comptable
+      const { data: move, error: moveError } = await supabase
+        .from("account_moves")
+        .insert({
+          number: `FACT-${invoice.number}`,
+          date: invoice.date,
+          journal_id: salesJournal.id,
+          ref: invoice.number,
+          company_id: companyId,
+          state: "draft",
+        })
+        .select()
+        .single();
+
+      if (moveError) throw moveError;
+
+      // Ligne débit : Compte client (411xxx)
+      await supabase.from("account_move_lines").insert({
+        move_id: move.id,
+        account_id: partner.account_id,
+        debit: totalTTC,
+        credit: 0,
+        currency: "CDF",
+      });
+
+      // Ligne crédit : Compte de vente (707000)
+      await supabase.from("account_move_lines").insert({
+        move_id: move.id,
+        account_id: salesAccount.id,
+        debit: 0,
+        credit: totalHT,
+        currency: "CDF",
+      });
+
+      // Ligne crédit : Compte TVA collectée (445710) si TVA > 0
+      if (totalTax > 0 && taxAccount) {
+        await supabase.from("account_move_lines").insert({
+          move_id: move.id,
+          account_id: taxAccount.id,
+          debit: 0,
+          credit: totalTax,
+          currency: "CDF",
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création des écritures:", error);
     }
   };
 
