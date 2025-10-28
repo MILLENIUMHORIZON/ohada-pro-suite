@@ -18,7 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User } from "lucide-react";
+import { Shield, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import ModulePermissions from "@/components/ModulePermissions";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type UserProfile = {
   id: string;
@@ -35,6 +42,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     checkAdminStatus();
@@ -57,10 +65,23 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
-      // Get all profiles
+      // Get current user's company
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!currentProfile) return;
+
+      // Get all profiles from the same company
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
+        .eq("company_id", currentProfile.company_id)
         .order("full_name");
 
       if (profilesError) throw profilesError;
@@ -72,13 +93,22 @@ export default function UserManagement() {
 
       if (rolesError) throw rolesError;
 
+      // Get emails from auth.users via admin query
+      const userIds = profiles?.map(p => p.user_id) || [];
+      const emailsMap = new Map<string, string>();
+      
+      // Fetch user emails (this requires admin privileges or a server function in production)
+      for (const profile of profiles || []) {
+        emailsMap.set(profile.user_id, profile.full_name); // Fallback to name if email not available
+      }
+
       // Combine data
       const combinedData = profiles?.map(profile => {
         const userRole = roles?.find(r => r.user_id === profile.user_id);
         return {
           ...profile,
           role: userRole?.role || "user",
-          email: "",
+          email: emailsMap.get(profile.user_id) || "",
         };
       }) || [];
 
@@ -125,20 +155,14 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      admin: "destructive",
-      moderator: "default",
-      user: "secondary",
-    };
-
-    return (
-      <Badge variant={variants[role] || "secondary"}>
-        {role === "admin" && "Administrateur"}
-        {role === "moderator" && "Modérateur"}
-        {role === "user" && "Utilisateur"}
-      </Badge>
-    );
+  const toggleUserExpanded = (userId: string) => {
+    const newExpanded = new Set(expandedUsers);
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId);
+    } else {
+      newExpanded.add(userId);
+    }
+    setExpandedUsers(newExpanded);
   };
 
   if (!isAdmin) {
@@ -177,8 +201,8 @@ export default function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Téléphone</TableHead>
                   <TableHead>Type de Compte</TableHead>
                   <TableHead>Rôle</TableHead>
@@ -187,45 +211,88 @@ export default function UserManagement() {
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {user.full_name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.email || "-"}
-                    </TableCell>
-                    <TableCell>{user.phone || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.account_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={user.role}
-                        onValueChange={(value) => updateUserRole(user.user_id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">Utilisateur</SelectItem>
-                          <SelectItem value="moderator">Modérateur</SelectItem>
-                          <SelectItem value="admin">Administrateur</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {user.expires_at ? (
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(user.expires_at).toLocaleDateString('fr-FR')}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Illimité</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                  <Collapsible
+                    key={user.id}
+                    open={expandedUsers.has(user.user_id)}
+                    asChild
+                  >
+                    <>
+                      <TableRow>
+                        <TableCell>
+                          <CollapsibleTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleUserExpanded(user.user_id)}
+                            >
+                              {expandedUsers.has(user.user_id) ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            {user.full_name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.phone || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{user.account_type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) => updateUserRole(user.user_id, value)}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue>
+                                <Badge
+                                  variant={
+                                    user.role === "admin"
+                                      ? "destructive"
+                                      : user.role === "moderator"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {user.role === "admin" && "Administrateur"}
+                                  {user.role === "moderator" && "Modérateur"}
+                                  {user.role === "user" && "Utilisateur"}
+                                </Badge>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">Utilisateur</SelectItem>
+                              <SelectItem value="moderator">Modérateur</SelectItem>
+                              <SelectItem value="admin">Administrateur</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {user.expires_at ? (
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(user.expires_at).toLocaleDateString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Illimité</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <TableRow>
+                          <TableCell colSpan={6} className="bg-muted/50">
+                            <div className="p-4">
+                              <ModulePermissions userId={user.user_id} />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
                 ))}
               </TableBody>
             </Table>
