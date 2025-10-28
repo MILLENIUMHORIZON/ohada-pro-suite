@@ -83,11 +83,17 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
       // Import accounts one by one
       for (const account of accounts) {
         try {
+          // Map type aliases (income -> revenue)
+          let accountType = account.type;
+          if (accountType === 'income') {
+            accountType = 'revenue';
+          }
+          
           const { error } = await supabase.from("accounts").insert({
             company_id: profile.company_id,
             code: account.code,
             name: account.name || account.nom,
-            type: account.type,
+            type: accountType,
             reconcilable: account.reconcilable === 'true' || account.reconcilable === '1' || account.lettrable === 'true' || account.lettrable === '1',
           });
 
@@ -123,21 +129,181 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
 
   const downloadTemplate = () => {
     const template = `code,name,type,reconcilable
-101,Caisse,asset,false
-411,Clients,receivable,true
-512,Banque,asset,true
-601,Achats de marchandises,expense,false
-701,Ventes de marchandises,income,false`;
+10,CAPITAUX PROPRES ET RESSOURCES ASSIMILEES,equity,false
+101000,Capital social,equity,false
+106000,Réserves,equity,false
+110000,Report à nouveau,equity,false
+120000,Résultat de l'exercice,equity,false
+13,EMPRUNTS ET DETTES ASSIMILEES,liability,false
+161000,Emprunts et dettes auprès des établissements de crédit,liability,false
+164000,Emprunts et dettes auprès de l'Etat,liability,false
+165000,Dépôts et cautionnements reçus,liability,false
+20,CHARGES IMMOBILISEES,asset,false
+201000,Frais de développement,asset,false
+206000,Logiciels et sites internet,asset,false
+21,IMMOBILISATIONS INCORPORELLES,asset,false
+211000,Frais de recherche et de développement,asset,false
+213000,Brevets licences logiciels,asset,false
+215000,Fonds commercial,asset,false
+22,TERRAINS,asset,false
+221000,Terrains nus,asset,false
+222000,Terrains aménagés,asset,false
+23,BATIMENTS INSTALLATIONS TECHNIQUES ET AGENCEMENTS,asset,false
+231000,Bâtiments industriels,asset,false
+232000,Bâtiments administratifs et commerciaux,asset,false
+233000,Bâtiments d'habitation,asset,false
+237000,Agencements et aménagements de bureaux,asset,false
+24,MATERIEL,asset,false
+241000,Matériel et outillage industriel et commercial,asset,false
+244000,Matériel de bureau,asset,false
+245000,Matériel de transport,asset,false
+246000,Matériel informatique,asset,false
+40,FOURNISSEURS ET COMPTES RATTACHES,payable,false
+401000,Fournisseurs dettes en compte,payable,true
+408000,Fournisseurs factures non parvenues,payable,false
+409000,Fournisseurs débiteurs avances et acomptes versés,payable,true
+41,CLIENTS ET COMPTES RATTACHES,receivable,false
+411000,Clients,receivable,true
+413000,Clients effets à recevoir,receivable,true
+416000,Créances clients douteuses,receivable,true
+418000,Clients produits à recevoir,receivable,false
+419000,Clients créditeurs avances et acomptes reçus,receivable,true
+42,PERSONNEL ET ORGANISMES SOCIAUX,liability,false
+421000,Personnel avances et acomptes,liability,true
+422000,Personnel rémunérations dues,liability,false
+423000,Personnel oppositions sur salaires,liability,false
+425000,Personnel provisions pour congés à payer,liability,false
+427000,Personnel charges à payer,liability,false
+431000,Sécurité sociale,liability,false
+432000,Autres organismes sociaux,liability,false
+44,ETAT ET COLLECTIVITES PUBLIQUES,liability,false
+441000,Etat subventions à recevoir,asset,false
+442000,Etat impôts et taxes recouvrables,asset,false
+443000,Operations particulieres avec l'Etat,liability,false
+445000,Etat TVA facturée,liability,false
+445710,TVA collectée,liability,false
+445800,TVA à régulariser,liability,false
+446000,Etat autres impôts et taxes,liability,false
+447000,Etat impôts retenus à la source,liability,false
+448000,Etat charges à payer,liability,false
+45,ORGANISMES INTERNATIONAUX,asset,false
+451000,Organismes internationaux opérations particulières,asset,false
+458000,Organismes internationaux charges à payer et produits à recevoir,asset,false
+46,ASSOCIES ET GROUPE,liability,false
+461000,Associés capital souscrit appelé non versé,receivable,true
+465000,Associés comptes courants,liability,true
+467000,Actionnaires capital souscrit non appelé,equity,false
+47,DEBITEURS ET CREDITEURS DIVERS,asset,false
+471000,Débiteurs divers,asset,true
+472000,Créditeurs divers,liability,true
+475000,Créances sur cessions d'immobilisations,asset,true
+476000,Dettes sur acquisitions d'immobilisations,liability,true
+50,TITRES DE PLACEMENT,asset,false
+501000,Titres du Trésor et bons de caisse à court terme,asset,false
+502000,Actions,asset,false
+506000,Obligations,asset,false
+51,BANQUES ETABLISSEMENTS FINANCIERS ET ASSIMILES,asset,false
+511000,Valeurs à l'encaissement,asset,false
+512000,Banques,asset,true
+514000,Chèques postaux,asset,true
+52,INSTRUMENTS DE TRESORERIE,asset,false
+521000,Titres de placement à court terme,asset,false
+53,CAISSE,asset,false
+571000,Caisse siège social,asset,true
+572000,Caisse succursale,asset,true
+60,ACHATS ET VARIATIONS DE STOCKS,expense,false
+601000,Achats de marchandises,expense,false
+602000,Achats de matières premières et fournitures liées,expense,false
+604000,Achats stockés de matières et fournitures consommables,expense,false
+605000,Autres achats,expense,false
+608000,Achats d'emballages,expense,false
+61,TRANSPORTS,expense,false
+611000,Transports sur ventes,expense,false
+612000,Transports sur achats,expense,false
+613000,Transports pour le compte de tiers,expense,false
+614000,Transports du personnel,expense,false
+618000,Autres frais de transport,expense,false
+62,SERVICES EXTERIEURS A,expense,false
+621000,Sous-traitance générale,expense,false
+622000,Locations et charges locatives,expense,false
+623000,Redevances de crédit-bail,expense,false
+624000,Entretien réparations et maintenance,expense,false
+625000,Primes d'assurances,expense,false
+626000,Etudes recherches et documentation,expense,false
+627000,Publicité publications et relations publiques,expense,false
+628000,Frais de télécommunications,expense,false
+63,SERVICES EXTERIEURS B,expense,false
+631000,Frais bancaires,expense,false
+632000,Rémunérations d'intermédiaires et de conseils,expense,false
+633000,Frais de formation du personnel,expense,false
+634000,Réceptions,expense,false
+635000,Missions et déplacements,expense,false
+637000,Redevances pour brevets licences logiciels,expense,false
+64,IMPOTS ET TAXES,expense,false
+641000,Impôts et taxes directs,expense,false
+645000,Autres impôts et taxes,expense,false
+646000,Droits d'enregistrement,expense,false
+647000,Pénalités et amendes fiscales,expense,false
+65,AUTRES CHARGES,expense,false
+651000,Pertes sur créances clients,expense,false
+658000,Charges diverses,expense,false
+66,CHARGES DE PERSONNEL,expense,false
+661000,Appointements salaires et commissions,expense,false
+662000,Primes et gratifications,expense,false
+663000,Congés payés,expense,false
+664000,Charges sociales,expense,false
+665000,Autres charges sociales,expense,false
+67,FRAIS FINANCIERS ET CHARGES ASSIMILEES,expense,false
+671000,Intérêts des emprunts,expense,false
+672000,Intérêts dans loyers de crédit-bail,expense,false
+673000,Escomptes accordés,expense,false
+674000,Autres frais financiers,expense,false
+676000,Pertes de change,expense,false
+677000,Charges sur cession de titres de placement,expense,false
+70,VENTES,revenue,false
+701000,Ventes de marchandises,revenue,false
+702000,Ventes de produits finis,revenue,false
+703000,Ventes de produits intermédiaires,revenue,false
+704000,Ventes de produits résiduels,revenue,false
+706000,Services vendus,revenue,false
+707000,Ventes de marchandises,revenue,false
+71,SUBVENTIONS D'EXPLOITATION,revenue,false
+711000,Subventions d'équilibre,revenue,false
+712000,Subventions compensatrices,revenue,false
+718000,Autres subventions d'exploitation,revenue,false
+72,PRODUCTION IMMOBILISEE,revenue,false
+721000,Immobilisations incorporelles,revenue,false
+722000,Immobilisations corporelles,revenue,false
+73,VARIATIONS DES STOCKS DE BIENS ET DE SERVICES PRODUITS,revenue,false
+734000,Variations des stocks de produits en cours,revenue,false
+735000,Variations des stocks de services en cours,revenue,false
+74,PRESTATIONS FOURNIES,revenue,false
+741000,Travaux,revenue,false
+742000,Etudes,revenue,false
+743000,Prestations de services,revenue,false
+75,AUTRES PRODUITS,revenue,false
+751000,Redevances pour brevets licences,revenue,false
+752000,Revenus des immeubles non affectés aux activités professionnelles,revenue,false
+753000,Jetons de présence,revenue,false
+754000,Ristournes perçues des coopératives,revenue,false
+758000,Produits divers,revenue,false
+77,REVENUS FINANCIERS ET PRODUITS ASSIMILES,revenue,false
+771000,Intérêts de prêts,revenue,false
+772000,Revenus de participations,revenue,false
+773000,Escomptes obtenus,revenue,false
+776000,Gains de change,revenue,false
+777000,Produits de cession de titres de placement,revenue,false`;
 
-    const blob = new Blob([template], { type: 'text/csv' });
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'plan_comptable_template.csv';
+    a.download = 'plan_comptable_ohada_complet.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+    toast.success("Template OHADA complet téléchargé");
   };
 
   return (
@@ -147,14 +313,16 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
         <AlertDescription>
           Format CSV attendu: code, name, type, reconcilable
           <br />
-          Types valides: asset, liability, equity, income, expense, receivable, payable
+          Types valides: asset, liability, equity, revenue (income), expense, receivable, payable
+          <br />
+          Le template inclut un plan comptable OHADA complet avec plus de 150 comptes.
           <br />
           <Button
             variant="link"
             className="h-auto p-0 text-xs"
             onClick={downloadTemplate}
           >
-            Télécharger un modèle
+            Télécharger le modèle OHADA complet
           </Button>
         </AlertDescription>
       </Alert>
