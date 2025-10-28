@@ -18,15 +18,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Shield, User, ChevronDown, ChevronUp, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import ModulePermissions from "@/components/ModulePermissions";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type UserProfile = {
   id: string;
@@ -45,6 +54,16 @@ export default function UserManagement() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    full_name: "",
+    phone: "",
+    role: "user",
+    account_type: "user"
+  });
 
   useEffect(() => {
     checkAdminStatus();
@@ -167,6 +186,58 @@ export default function UserManagement() {
     setExpandedUsers(newExpanded);
   };
 
+  const createUser = async () => {
+    if (!newUser.email || !newUser.password || !newUser.full_name || !newUser.role) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newUser),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la création');
+      }
+
+      toast.success("Utilisateur créé avec succès");
+      setIsCreateDialogOpen(false);
+      setNewUser({
+        email: "",
+        password: "",
+        full_name: "",
+        phone: "",
+        role: "user",
+        account_type: "user"
+      });
+      loadUsers();
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      toast.error(error.message || "Erreur lors de la création de l'utilisateur");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="space-y-6">
@@ -201,14 +272,20 @@ export default function UserManagement() {
                 {users.length} utilisateur{users.length > 1 ? 's' : ''} dans votre entreprise
               </CardDescription>
             </div>
-            <div className="flex w-64 items-center gap-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un utilisateur..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-0 bg-muted/50"
-              />
+            <div className="flex items-center gap-3">
+              <div className="flex w-64 items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un utilisateur..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border-0 bg-muted/50"
+                />
+              </div>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Créer un utilisateur
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -322,6 +399,105 @@ export default function UserManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Créer un utilisateur</DialogTitle>
+            <DialogDescription>
+              Ajoutez un nouvel utilisateur à votre entreprise
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="utilisateur@exemple.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Mot de passe *</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Au moins 6 caractères"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="full_name">Nom complet *</Label>
+              <Input
+                id="full_name"
+                placeholder="Jean Dupont"
+                value={newUser.full_name}
+                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                placeholder="+243 XXX XXX XXX"
+                value={newUser.phone}
+                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Rôle *</Label>
+              <Select
+                value={newUser.role}
+                onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Utilisateur</SelectItem>
+                  <SelectItem value="moderator">Modérateur</SelectItem>
+                  <SelectItem value="admin">Administrateur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="account_type">Type de compte</Label>
+              <Select
+                value={newUser.account_type}
+                onValueChange={(value) => setNewUser({ ...newUser, account_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="demo">Demo (15 jours)</SelectItem>
+                  <SelectItem value="user">Standard</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+              disabled={isCreating}
+            >
+              Annuler
+            </Button>
+            <Button onClick={createUser} disabled={isCreating}>
+              {isCreating ? "Création..." : "Créer l'utilisateur"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
