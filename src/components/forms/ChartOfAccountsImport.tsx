@@ -368,15 +368,23 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
 776000,Gains de change,income,false
 777000,Produits de cession de titres de placement,income,false`;
 
-    const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
+    // Add UTF-8 BOM for better CSV compatibility with Excel and other applications
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + template], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'plan_comptable_ohada_complet.csv';
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+    
     toast.success("Template OHADA complet téléchargé");
   };
 
