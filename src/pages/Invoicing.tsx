@@ -31,36 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const mockInvoices = [
-  {
-    id: 1,
-    number: "FAC-2025-0045",
-    partner: "Entreprise ABC",
-    date: "2025-01-15",
-    dueDate: "2025-02-14",
-    amount: "1,250,000 CDF",
-    status: "posted",
-  },
-  {
-    id: 2,
-    number: "FAC-2025-0044",
-    partner: "Tech Solutions",
-    date: "2025-01-14",
-    dueDate: "2025-02-13",
-    amount: "3,450,000 CDF",
-    status: "paid",
-  },
-  {
-    id: 3,
-    number: "FAC-2025-0043",
-    partner: "Industries XYZ",
-    date: "2025-01-13",
-    dueDate: "2025-02-12",
-    amount: "875,000 CDF",
-    status: "draft",
-  },
-];
-
 const statusConfig = {
   draft: { label: "Brouillon", variant: "secondary" as const },
   posted: { label: "Validée", variant: "default" as const },
@@ -99,6 +69,36 @@ export default function Invoicing() {
       if (data) setCompany(data);
     }
   };
+
+  // Filter invoices based on search and status
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch = 
+      invoice.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.partner?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Calculate stats from real invoices
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyInvoices = invoices.filter(inv => {
+    const invDate = new Date(inv.date);
+    return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+  });
+
+  const totalAmount = monthlyInvoices.reduce((sum, inv) => sum + (inv.total_ttc || 0), 0);
+  const unpaidInvoices = invoices.filter(inv => inv.status === 'posted');
+  const amountToPay = unpaidInvoices.reduce((sum, inv) => sum + (inv.total_ttc || 0), 0);
+  
+  const overdueInvoices = invoices.filter(inv => {
+    if (!inv.due_date || inv.status === 'paid') return false;
+    return new Date(inv.due_date) < new Date();
+  });
+  const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + (inv.total_ttc || 0), 0);
 
   const handleDownloadInvoice = async (invoice: any) => {
     try {
@@ -216,8 +216,10 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
-            <p className="text-xs text-muted-foreground mt-1">+12 cette semaine</p>
+            <div className="text-2xl font-bold">{monthlyInvoices.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {invoices.length} au total
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -227,8 +229,10 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45,250,000 CDF</div>
-            <p className="text-xs text-success mt-1">+15% vs mois dernier</p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(totalAmount)} CDF
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Ce mois</p>
           </CardContent>
         </Card>
         <Card>
@@ -238,8 +242,12 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,800,000 CDF</div>
-            <p className="text-xs text-warning mt-1">23 factures en attente</p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(amountToPay)} CDF
+            </div>
+            <p className="text-xs text-warning mt-1">
+              {unpaidInvoices.length} facture{unpaidInvoices.length > 1 ? 's' : ''} en attente
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -249,8 +257,12 @@ export default function Invoicing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,450,000 CDF</div>
-            <p className="text-xs text-destructive mt-1">5 factures échues</p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR').format(overdueAmount)} CDF
+            </div>
+            <p className="text-xs text-destructive mt-1">
+              {overdueInvoices.length} facture{overdueInvoices.length > 1 ? 's' : ''} échue{overdueInvoices.length > 1 ? 's' : ''}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -298,7 +310,7 @@ export default function Invoicing() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.length > 0 ? invoices.map((invoice) => (
+              {filteredInvoices.length > 0 ? filteredInvoices.map((invoice) => (
                 <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{invoice.number}</TableCell>
                   <TableCell>{invoice.partner?.name}</TableCell>
@@ -332,8 +344,10 @@ export default function Invoicing() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Aucune facture trouvée
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    {invoices.length === 0 
+                      ? "Aucune facture enregistrée. Créez votre première facture pour commencer."
+                      : "Aucune facture ne correspond à votre recherche"}
                   </TableCell>
                 </TableRow>
               )}
