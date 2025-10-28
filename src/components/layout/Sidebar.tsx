@@ -1,5 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -11,20 +12,71 @@ import {
   ClipboardList,
   ShoppingCart,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "CRM", href: "/crm", icon: Users },
-  { name: "Pro Forma", href: "/proforma", icon: ClipboardList },
-  { name: "Approvisionnements", href: "/procurement", icon: ShoppingCart },
-  { name: "Facturation", href: "/invoicing", icon: FileText },
-  { name: "Stock", href: "/stock", icon: Package },
-  { name: "Comptabilité", href: "/accounting", icon: Calculator },
-  { name: "Paramètres", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, shortcut: "⌘D" },
+  { name: "CRM", href: "/crm", icon: Users, shortcut: "⌘C" },
+  { name: "Pro Forma", href: "/proforma", icon: ClipboardList, shortcut: "⌘P" },
+  { name: "Approvisionnements", href: "/procurement", icon: ShoppingCart, shortcut: "⌘A" },
+  { name: "Facturation", href: "/invoicing", icon: FileText, shortcut: "⌘F" },
+  { name: "Stock", href: "/stock", icon: Package, shortcut: "⌘S" },
+  { name: "Comptabilité", href: "/accounting", icon: Calculator, shortcut: "⌘K" },
+  { name: "Paramètres", href: "/settings", icon: Settings, shortcut: "⌘," },
 ];
 
 export const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key.toLowerCase()) {
+          case 'd':
+            e.preventDefault();
+            navigate('/');
+            break;
+          case 'c':
+            e.preventDefault();
+            navigate('/crm');
+            break;
+          case 'p':
+            e.preventDefault();
+            navigate('/proforma');
+            break;
+          case 'a':
+            e.preventDefault();
+            navigate('/procurement');
+            break;
+          case 'f':
+            e.preventDefault();
+            navigate('/invoicing');
+            break;
+          case 's':
+            e.preventDefault();
+            navigate('/stock');
+            break;
+          case 'k':
+            e.preventDefault();
+            navigate('/accounting');
+            break;
+          case ',':
+            e.preventDefault();
+            navigate('/settings');
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyboard);
+    return () => window.removeEventListener('keydown', handleKeyboard);
+  }, [navigate]);
 
   return (
     <div className="flex h-screen w-64 flex-col bg-sidebar border-r border-sidebar-border">
@@ -46,19 +98,28 @@ export const Sidebar = () => {
           const isActive = location.pathname === item.href;
           
           return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-primary"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              <span>{item.name}</span>
-            </Link>
+            <Tooltip key={item.name} delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Link
+                  to={item.href}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </div>
+                  <span className="text-xs text-sidebar-foreground/40">{item.shortcut}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Raccourci: {item.shortcut}</p>
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </nav>
