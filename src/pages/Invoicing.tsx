@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Download, Printer } from "lucide-react";
+import { Plus, Search, FileText, Download, Printer, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
@@ -43,6 +43,7 @@ export default function Invoicing() {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [company, setCompany] = useState<any>(null);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -344,6 +345,15 @@ export default function Invoicing() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {invoice.status === 'draft' && (
+                          <DropdownMenuItem onClick={() => {
+                            setEditingInvoice(invoice);
+                            setIsInvoiceDialogOpen(true);
+                          }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Modifier
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
                           <Download className="mr-2 h-4 w-4" />
                           Télécharger PDF
@@ -370,15 +380,22 @@ export default function Invoicing() {
         </CardContent>
       </Card>
 
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={(open) => {
+        setIsInvoiceDialogOpen(open);
+        if (!open) setEditingInvoice(null);
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nouvelle Facture</DialogTitle>
+            <DialogTitle>{editingInvoice ? "Modifier la Facture" : "Nouvelle Facture"}</DialogTitle>
           </DialogHeader>
-          <InvoiceForm onSuccess={() => {
-            setIsInvoiceDialogOpen(false);
-            loadInvoices();
-          }} />
+          <InvoiceForm 
+            invoice={editingInvoice}
+            onSuccess={() => {
+              setIsInvoiceDialogOpen(false);
+              setEditingInvoice(null);
+              loadInvoices();
+            }} 
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -42,10 +42,11 @@ const invoiceFormSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
 interface InvoiceFormProps {
+  invoice?: any;
   onSuccess?: () => void;
 }
 
-export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
+export function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
   const [partners, setPartners] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
@@ -61,6 +62,24 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       lines: [{ product_id: "", description: "", qty: "1", unit_price: "0", tax_id: "" }],
     },
   });
+
+  useEffect(() => {
+    if (invoice) {
+      form.reset({
+        partner_id: invoice.partner_id,
+        date: invoice.date,
+        due_date: invoice.due_date,
+        number: invoice.number,
+        lines: invoice.lines.map((line: any) => ({
+          product_id: line.product_id,
+          description: line.description || "",
+          qty: line.qty.toString(),
+          unit_price: line.unit_price.toString(),
+          tax_id: line.tax_id || "",
+        })),
+      });
+    }
+  }, [invoice, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -135,48 +154,86 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
       const totalTTC = totalHT + totalTax;
 
-      // Créer la facture avec les totaux
-      const { data: invoice, error: invoiceError } = await supabase
-        .from("invoices")
-        .insert([{
-          number: values.number || null,
-          partner_id: values.partner_id,
-          date: values.date,
-          due_date: values.due_date,
-          status: "draft",
-          type: "customer",
-          total_ht: totalHT,
-          total_tax: totalTax,
-          total_ttc: totalTTC,
-        }])
-        .select()
-        .single();
+      let invoiceData;
 
-      if (invoiceError) throw invoiceError;
+      if (invoice) {
+        // Mise à jour de la facture existante
+        const { data: updatedInvoice, error: invoiceError } = await supabase
+          .from("invoices")
+          .update({
+            partner_id: values.partner_id,
+            date: values.date,
+            due_date: values.due_date,
+            total_ht: totalHT,
+            total_tax: totalTax,
+            total_ttc: totalTTC,
+          })
+          .eq("id", invoice.id)
+          .select()
+          .single();
 
-      // Créer les lignes
-      const lines = linesWithTotals.map((line) => ({
-        ...line,
-        invoice_id: invoice.id,
-      }));
+        if (invoiceError) throw invoiceError;
+        invoiceData = updatedInvoice;
 
-      const { error: linesError } = await supabase
-        .from("invoice_lines")
-        .insert(lines);
+        // Supprimer les anciennes lignes
+        await supabase.from("invoice_lines").delete().eq("invoice_id", invoice.id);
 
-      if (linesError) throw linesError;
+        // Créer les nouvelles lignes
+        const lines = linesWithTotals.map((line) => ({
+          ...line,
+          invoice_id: invoice.id,
+        }));
 
-      // Créer les écritures comptables
-      await createAccountingEntries(
-        invoice,
-        values.partner_id,
-        totalHT,
-        totalTax,
-        totalTTC,
-        profile.company_id
-      );
+        const { error: linesError } = await supabase
+          .from("invoice_lines")
+          .insert(lines);
 
-      toast.success("Facture et écritures comptables créées avec succès");
+        if (linesError) throw linesError;
+      } else {
+        // Créer une nouvelle facture
+        const { data: newInvoice, error: invoiceError } = await supabase
+          .from("invoices")
+          .insert([{
+            number: values.number || null,
+            partner_id: values.partner_id,
+            date: values.date,
+            due_date: values.due_date,
+            status: "draft",
+            type: "customer",
+            total_ht: totalHT,
+            total_tax: totalTax,
+            total_ttc: totalTTC,
+          }])
+          .select()
+          .single();
+
+        if (invoiceError) throw invoiceError;
+        invoiceData = newInvoice;
+
+        // Créer les lignes
+        const lines = linesWithTotals.map((line) => ({
+          ...line,
+          invoice_id: newInvoice.id,
+        }));
+
+        const { error: linesError } = await supabase
+          .from("invoice_lines")
+          .insert(lines);
+
+        if (linesError) throw linesError;
+
+        // Créer les écritures comptables (uniquement pour les nouvelles factures)
+        await createAccountingEntries(
+          newInvoice,
+          values.partner_id,
+          totalHT,
+          totalTax,
+          totalTTC,
+          profile.company_id
+        );
+      }
+
+      toast.success(invoice ? "Facture mise à jour avec succès" : "Facture et écritures comptables créées avec succès");
       form.reset();
       onSuccess?.();
     } catch (error: any) {
