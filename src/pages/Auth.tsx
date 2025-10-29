@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,8 @@ export default function Auth() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -43,6 +45,15 @@ export default function Auth() {
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Check for password recovery on mount
+  useEffect(() => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+      }
+    });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,6 +160,51 @@ export default function Auth() {
     }
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = z.string()
+        .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+        .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+        .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+        .safeParse(newPassword);
+
+      if (!result.success) {
+        toast({
+          title: "Mot de passe invalide",
+          description: result.error.issues[0].message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: result.data,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Mot de passe mis à jour",
+        description: "Votre mot de passe a été modifié avec succès",
+      });
+      
+      setRecoveryMode(false);
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -209,6 +265,53 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
+  // Show password recovery form if in recovery mode
+  if (recoveryMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center space-y-2">
+            <div className="flex justify-center mb-4">
+              <div className="bg-primary/10 p-3 rounded-xl">
+                <Lock className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Réinitialiser le mot de passe</CardTitle>
+            <CardDescription>
+              Choisissez un nouveau mot de passe sécurisé
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Min 8 caractères, 1 majuscule, 1 chiffre
+                </p>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
