@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       account_type: account_type || 'user'
     })
 
-    // Create the user - the trigger will handle profile creation
+    // Create the user - the trigger will handle profile creation and role assignment
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -119,59 +119,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Wait a bit for trigger to complete
+    // Wait for trigger to complete
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Ensure profile exists with correct company_id (fallback if trigger didn't run)
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, company_id')
-      .eq('user_id', newUser.user.id)
-      .maybeSingle()
+    // Override role if specified (trigger assigns 'user' by default for admin-created users)
+    if (role && role !== 'user') {
+      const { error: roleUpdateError } = await supabaseAdmin
+        .from('user_roles')
+        .update({ role: role })
+        .eq('user_id', newUser.user.id)
 
-    if (!existingProfile) {
-      const { error: profileInsertError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: newUser.user.id,
-          full_name,
-          phone: phone || '',
-          company_id: adminProfile.company_id,
-          company_name: companyName,
-          account_type: account_type || 'user',
-          expires_at: null
-        })
-      if (profileInsertError) {
-        console.error('Profile insert error:', profileInsertError)
+      if (roleUpdateError) {
+        console.error('Role update error:', roleUpdateError)
       }
-    } else if (!existingProfile.company_id) {
-      const { error: profileUpdateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          company_id: adminProfile.company_id,
-          company_name: companyName
-        })
-        .eq('id', existingProfile.id)
-      if (profileUpdateError) {
-        console.error('Profile update error:', profileUpdateError)
-      }
-    }
-
-    // Assign role (user_roles not created by trigger when adding to existing company)
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role: role
-      })
-
-    if (roleError) {
-      console.error('Role assignment error:', roleError)
-      // Don't rollback, just report the error
-      return new Response(
-        JSON.stringify({ error: 'Utilisateur créé mais erreur lors de l\'assignation du rôle: ' + roleError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
     }
 
     return new Response(
