@@ -46,13 +46,52 @@ export default function Auth() {
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Check for password recovery on mount
+  // Handle password recovery tokens in URL and auth event
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    const { hash } = window.location;
+
+    const parseHash = (h: string) => {
+      const params = new URLSearchParams(h.replace(/^#/, ""));
+      return {
+        access_token: params.get("access_token"),
+        refresh_token: params.get("refresh_token"),
+        type: params.get("type"),
+      };
+    };
+
+    const maybeHandleRecoveryFromHash = async () => {
+      const { access_token, refresh_token, type } = parseHash(hash);
+      if (type === "recovery" && access_token && refresh_token) {
+        try {
+          await supabase.auth.setSession({ access_token, refresh_token });
+          setRecoveryMode(true);
+        } catch (e) {
+          console.error("Failed to set recovery session", e);
+        } finally {
+          // Clean hash to avoid leaking tokens
+          history.replaceState(
+            null,
+            document.title,
+            window.location.pathname + window.location.search
+          );
+        }
+      } else if (type === "recovery") {
+        // If only type present, still show recovery UI
+        setRecoveryMode(true);
+      }
+    };
+
+    maybeHandleRecoveryFromHash();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
         setRecoveryMode(true);
       }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
