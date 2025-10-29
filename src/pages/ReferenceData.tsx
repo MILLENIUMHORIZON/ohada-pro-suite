@@ -154,7 +154,19 @@ export default function ReferenceData() {
   };
 
   const handleCurrencySubmit = async (formData: any) => {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .maybeSingle();
+    
+    if (profileError || !profile?.company_id) {
+      toast.error("Erreur: Impossible de récupérer les informations de l'entreprise");
+      console.error("Profile error:", profileError);
+      return;
+    }
+    
     const { error } = await supabase.from("currencies").insert({
+      company_id: profile.company_id,
       code: formData.code.toUpperCase(),
       name: formData.name,
       symbol: formData.symbol,
