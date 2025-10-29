@@ -19,9 +19,16 @@ export default function CompanySettings() {
 
   const loadCompanyData = async () => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+
+      // Get profile with company_id for current user
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
+        .eq("user_id", user.id)
         .single();
 
       if (profile?.company_id) {
@@ -44,9 +51,17 @@ export default function CompanySettings() {
     try {
       setLoading(true);
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Utilisateur non connecté");
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
+        .eq("user_id", user.id)
         .single();
 
       if (!profile?.company_id) {
