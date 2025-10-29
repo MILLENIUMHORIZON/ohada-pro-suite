@@ -70,6 +70,27 @@ export default function UserManagement() {
   useEffect(() => {
     checkAdminStatus();
     loadUsers();
+
+    // Setup realtime listener for profile changes
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile changed:', payload);
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAdminStatus = async () => {
@@ -222,6 +243,11 @@ export default function UserManagement() {
       }
 
       toast.success("Utilisateur créé avec succès");
+      
+      // Wait a bit for trigger to complete and reload users
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await loadUsers();
+      
       setIsCreateDialogOpen(false);
       setNewUser({
         email: "",
@@ -231,7 +257,6 @@ export default function UserManagement() {
         role: "user",
         account_type: "user"
       });
-      loadUsers();
     } catch (error: any) {
       console.error("Error creating user:", error);
       toast.error(error.message || "Erreur lors de la création de l'utilisateur");
