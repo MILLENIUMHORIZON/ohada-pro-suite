@@ -111,6 +111,37 @@ Deno.serve(async (req) => {
     // Wait a bit for trigger to complete
     await new Promise(resolve => setTimeout(resolve, 500))
 
+    // Ensure profile exists with correct company_id (fallback if trigger didn't run)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, company_id')
+      .eq('user_id', newUser.user.id)
+      .maybeSingle()
+
+    if (!existingProfile) {
+      const { error: profileInsertError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          user_id: newUser.user.id,
+          full_name,
+          phone: phone || '',
+          company_id: adminProfile.company_id,
+          account_type: account_type || 'user',
+          expires_at: null
+        })
+      if (profileInsertError) {
+        console.error('Profile insert error:', profileInsertError)
+      }
+    } else if (!existingProfile.company_id) {
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ company_id: adminProfile.company_id })
+        .eq('id', existingProfile.id)
+      if (profileUpdateError) {
+        console.error('Profile update error:', profileUpdateError)
+      }
+    }
+
     // Assign role (user_roles not created by trigger when adding to existing company)
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
