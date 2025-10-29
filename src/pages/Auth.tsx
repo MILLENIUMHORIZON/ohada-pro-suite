@@ -186,7 +186,11 @@ export default function Auth() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Show detailed error message to help with debugging
+        console.error("Signup error:", error);
+        throw new Error(error.message || "Erreur lors de la création du compte");
+      }
 
       toast({
         title: "Compte créé avec succès! 🎉",
