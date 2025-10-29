@@ -67,26 +67,16 @@ export default function ReferenceData() {
   }, []);
 
   const handleTaxSubmit = async (formData: any) => {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .maybeSingle();
-    
-    if (profileError || !profile?.company_id) {
-      toast.error("Erreur: Impossible de récupérer les informations de l'entreprise");
-      console.error("Profile error:", profileError);
-      return;
-    }
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
     
     const { error } = await supabase.from("taxes").insert({
-      company_id: profile.company_id,
+      company_id: profile?.company_id,
       name: formData.name,
       rate: parseFloat(formData.rate),
     });
 
     if (error) {
-      toast.error("Erreur lors de la création de la taxe: " + error.message);
-      console.error("Tax insert error:", error);
+      toast.error("Erreur lors de la création de la taxe");
     } else {
       toast.success("Taxe créée avec succès");
       setIsTaxDialogOpen(false);
@@ -96,27 +86,17 @@ export default function ReferenceData() {
   };
 
   const handleUomSubmit = async (formData: any) => {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .maybeSingle();
-    
-    if (profileError || !profile?.company_id) {
-      toast.error("Erreur: Impossible de récupérer les informations de l'entreprise");
-      console.error("Profile error:", profileError);
-      return;
-    }
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
     
     const { error } = await supabase.from("uom").insert({
-      company_id: profile.company_id,
+      company_id: profile?.company_id,
       name: formData.name,
       code: formData.code,
       ratio: formData.ratio ? parseFloat(formData.ratio) : 1.0,
     });
 
     if (error) {
-      toast.error("Erreur lors de la création de l'unité: " + error.message);
-      console.error("UOM insert error:", error);
+      toast.error("Erreur lors de la création de l'unité");
     } else {
       toast.success("Unité créée avec succès");
       setIsUomDialogOpen(false);
@@ -126,25 +106,15 @@ export default function ReferenceData() {
   };
 
   const handleCategorySubmit = async (formData: any) => {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .maybeSingle();
-    
-    if (profileError || !profile?.company_id) {
-      toast.error("Erreur: Impossible de récupérer les informations de l'entreprise");
-      console.error("Profile error:", profileError);
-      return;
-    }
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
     
     const { error } = await supabase.from("product_categories").insert({
-      company_id: profile.company_id,
+      company_id: profile?.company_id,
       name: formData.name,
     });
 
     if (error) {
-      toast.error("Erreur lors de la création de la catégorie: " + error.message);
-      console.error("Category insert error:", error);
+      toast.error("Erreur lors de la création de la catégorie");
     } else {
       toast.success("Catégorie créée avec succès");
       setIsCategoryDialogOpen(false);
@@ -154,29 +124,19 @@ export default function ReferenceData() {
   };
 
   const handleCurrencySubmit = async (formData: any) => {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .maybeSingle();
-    
-    if (profileError || !profile?.company_id) {
-      toast.error("Erreur: Impossible de récupérer les informations de l'entreprise");
-      console.error("Profile error:", profileError);
-      return;
-    }
+    const { data: profile } = await supabase.from("profiles").select("company_id").single();
     
     const { error } = await supabase.from("currencies").insert({
-      company_id: profile.company_id,
+      company_id: profile?.company_id,
       code: formData.code.toUpperCase(),
       name: formData.name,
       symbol: formData.symbol,
       rate: parseFloat(formData.rate),
       is_base: formData.is_base === "true",
-    } as any);
+    });
 
     if (error) {
-      toast.error("Erreur lors de la création de la devise: " + error.message);
-      console.error("Currency insert error:", error);
+      toast.error("Erreur lors de la création de la devise");
     } else {
       toast.success("Devise créée avec succès");
       setIsCurrencyDialogOpen(false);

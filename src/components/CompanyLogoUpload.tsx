@@ -21,7 +21,7 @@ export function CompanyLogoUpload() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
-        .maybeSingle();
+        .single();
 
       if (profile?.company_id) {
         setCompanyId(profile.company_id);
@@ -62,8 +62,7 @@ export function CompanyLogoUpload() {
       }
 
       if (!companyId) {
-        toast.error("Impossible de récupérer l'ID de l'entreprise");
-        return;
+        throw new Error("Impossible de récupérer l'ID de l'entreprise");
       }
 
       const fileExt = file.name.split('.').pop();

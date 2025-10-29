@@ -22,7 +22,7 @@ export default function CompanySettings() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
-        .maybeSingle();
+        .single();
 
       if (profile?.company_id) {
         const { data: company } = await supabase
@@ -47,11 +47,10 @@ export default function CompanySettings() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
-        .maybeSingle();
+        .single();
 
       if (!profile?.company_id) {
-        toast.error("Impossible de récupérer l'ID de l'entreprise");
-        return;
+        throw new Error("Impossible de récupérer l'ID de l'entreprise");
       }
 
       const { error } = await supabase
