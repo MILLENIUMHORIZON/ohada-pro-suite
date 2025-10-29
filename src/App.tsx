@@ -91,6 +91,7 @@ const App = () => {
             <Route path="/manage-keys" element={<AppLayout><ManageActivationKeys /></AppLayout>} />
             <Route path="/users" element={<AppLayout><UserManagement /></AppLayout>} />
             <Route path="/reference-data" element={<AppLayout><ReferenceData /></AppLayout>} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
