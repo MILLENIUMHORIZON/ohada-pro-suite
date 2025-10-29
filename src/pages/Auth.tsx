@@ -48,7 +48,20 @@ export default function Auth() {
 
   // Handle password recovery tokens in URL and auth event
   useEffect(() => {
-    const { hash } = window.location;
+    const { hash, search } = window.location;
+    const searchParams = new URLSearchParams(search);
+    const modeParam = searchParams.get("mode");
+
+    // Clear form states when entering recovery mode
+    const clearFormStates = () => {
+      setLoginEmail("");
+      setLoginPassword("");
+      setSignupEmail("");
+      setSignupPassword("");
+      setFullName("");
+      setCompanyName("");
+      setPhone("");
+    };
 
     const parseHash = (h: string) => {
       const params = new URLSearchParams(h.replace(/^#/, ""));
@@ -61,23 +74,33 @@ export default function Auth() {
 
     const maybeHandleRecoveryFromHash = async () => {
       const { access_token, refresh_token, type } = parseHash(hash);
-      if (type === "recovery" && access_token && refresh_token) {
-        try {
-          await supabase.auth.setSession({ access_token, refresh_token });
+      
+      // Check for recovery mode via URL parameter or hash
+      if (modeParam === "recovery" || type === "recovery") {
+        clearFormStates();
+        
+        if (access_token && refresh_token) {
+          try {
+            await supabase.auth.setSession({ access_token, refresh_token });
+            setRecoveryMode(true);
+          } catch (e) {
+            console.error("Failed to set recovery session", e);
+            toast({
+              title: "Erreur",
+              description: "Impossible de charger la session de récupération",
+              variant: "destructive",
+            });
+          } finally {
+            // Clean hash to avoid leaking tokens
+            history.replaceState(
+              null,
+              document.title,
+              window.location.pathname + "?mode=recovery"
+            );
+          }
+        } else {
           setRecoveryMode(true);
-        } catch (e) {
-          console.error("Failed to set recovery session", e);
-        } finally {
-          // Clean hash to avoid leaking tokens
-          history.replaceState(
-            null,
-            document.title,
-            window.location.pathname + window.location.search
-          );
         }
-      } else if (type === "recovery") {
-        // If only type present, still show recovery UI
-        setRecoveryMode(true);
       }
     };
 
@@ -85,6 +108,7 @@ export default function Auth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
+        clearFormStates();
         setRecoveryMode(true);
       }
     });
