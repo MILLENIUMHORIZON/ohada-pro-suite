@@ -113,13 +113,16 @@ export default function UserManagement() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: currentProfile } = await supabase
+      const { data: currentProfile, error: profileError } = await supabase
         .from("profiles")
         .select("company_id")
         .eq("user_id", user.id)
         .single();
 
-      if (!currentProfile) return;
+      if (profileError || !currentProfile) {
+        console.error("Error loading profile:", profileError);
+        return;
+      }
 
       // Get all profiles from the same company
       const { data: profiles, error: profilesError } = await supabase
