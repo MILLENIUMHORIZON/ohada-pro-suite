@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Create the user
+    // Create the user - the trigger will handle profile creation
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -93,27 +93,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Create profile
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: newUser.user.id,
-        full_name,
-        phone: phone || '',
-        company_id: adminProfile.company_id,
-        account_type: account_type || 'user'
-      })
+    // Wait a bit for trigger to complete
+    await new Promise(resolve => setTimeout(resolve, 500))
 
-    if (profileError) {
-      // Rollback user creation
-      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
-      return new Response(
-        JSON.stringify({ error: 'Erreur lors de la création du profil' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Assign role
+    // Assign role (user_roles not created by trigger when adding to existing company)
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
@@ -122,10 +105,10 @@ Deno.serve(async (req) => {
       })
 
     if (roleError) {
-      // Rollback
-      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
+      console.error('Role assignment error:', roleError)
+      // Don't rollback, just report the error
       return new Response(
-        JSON.stringify({ error: 'Erreur lors de l\'assignation du rôle' }),
+        JSON.stringify({ error: 'Utilisateur créé mais erreur lors de l\'assignation du rôle: ' + roleError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
