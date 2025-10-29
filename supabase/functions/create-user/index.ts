@@ -68,6 +68,15 @@ Deno.serve(async (req) => {
 
     console.log('Using company_id:', adminProfile.company_id)
 
+    // Get company name
+    const { data: companyData } = await supabaseAdmin
+      .from('companies')
+      .select('name')
+      .eq('id', adminProfile.company_id)
+      .single()
+
+    const companyName = companyData?.name || ''
+
     const { email, password, full_name, phone, role, account_type } = await req.json()
 
     // Validate required fields
@@ -82,6 +91,7 @@ Deno.serve(async (req) => {
       full_name,
       phone: phone || '',
       company_id: adminProfile.company_id,
+      company_name: companyName,
       account_type: account_type || 'user'
     })
 
@@ -94,6 +104,7 @@ Deno.serve(async (req) => {
         full_name,
         phone: phone || '',
         company_id: adminProfile.company_id,
+        company_name: companyName,
         account_type: account_type || 'user'
       }
     })
@@ -126,6 +137,7 @@ Deno.serve(async (req) => {
           full_name,
           phone: phone || '',
           company_id: adminProfile.company_id,
+          company_name: companyName,
           account_type: account_type || 'user',
           expires_at: null
         })
@@ -135,7 +147,10 @@ Deno.serve(async (req) => {
     } else if (!existingProfile.company_id) {
       const { error: profileUpdateError } = await supabaseAdmin
         .from('profiles')
-        .update({ company_id: adminProfile.company_id })
+        .update({ 
+          company_id: adminProfile.company_id,
+          company_name: companyName
+        })
         .eq('id', existingProfile.id)
       if (profileUpdateError) {
         console.error('Profile update error:', profileUpdateError)
