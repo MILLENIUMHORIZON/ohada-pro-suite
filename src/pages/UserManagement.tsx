@@ -111,7 +111,12 @@ export default function UserManagement() {
     try {
       // Get current user's company
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("No user found");
+        return;
+      }
+
+      console.log("Current user ID:", user.id);
 
       const { data: currentProfile, error: profileError } = await supabase
         .from("profiles")
@@ -124,12 +129,17 @@ export default function UserManagement() {
         return;
       }
 
+      console.log("Current company_id:", currentProfile.company_id);
+
       // Get all profiles from the same company
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
         .eq("company_id", currentProfile.company_id)
         .order("full_name");
+
+      console.log("Loaded profiles:", profiles);
+      console.log("Profile error:", profilesError);
 
       if (profilesError) throw profilesError;
 

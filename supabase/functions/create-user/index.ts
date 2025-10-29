@@ -56,12 +56,17 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single()
 
+    console.log('Admin user ID:', user.id)
+    console.log('Admin profile:', adminProfile)
+
     if (!adminProfile?.company_id) {
       return new Response(
         JSON.stringify({ error: 'Entreprise non trouvée' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
+
+    console.log('Using company_id:', adminProfile.company_id)
 
     const { email, password, full_name, phone, role, account_type } = await req.json()
 
@@ -72,6 +77,13 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
+
+    console.log('Creating user with metadata:', {
+      full_name,
+      phone: phone || '',
+      company_id: adminProfile.company_id,
+      account_type: account_type || 'user'
+    })
 
     // Create the user - the trigger will handle profile creation
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -85,6 +97,9 @@ Deno.serve(async (req) => {
         account_type: account_type || 'user'
       }
     })
+
+    console.log('User created:', newUser?.user?.id)
+    console.log('Create error:', createError)
 
     if (createError) {
       return new Response(
