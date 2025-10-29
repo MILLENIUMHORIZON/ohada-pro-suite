@@ -23,7 +23,7 @@ const signupSchema = z.object({
     .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
     .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre"),
   fullName: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(100, "Le nom est trop long"),
-  companyName: z.string().trim().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères").max(100, "Le nom de l'entreprise est trop long").optional().or(z.literal("")),
+  companyName: z.string().trim().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères").max(100, "Le nom de l'entreprise est trop long"),
   phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Numéro de téléphone invalide").optional().or(z.literal("")),
 });
 
@@ -159,7 +159,7 @@ export default function Auth() {
         email: signupEmail,
         password: signupPassword,
         fullName: fullName,
-        companyName: companyName || "",
+        companyName: companyName,
         phone: phone || "",
       });
 
@@ -179,7 +179,7 @@ export default function Auth() {
         options: {
           data: {
             full_name: result.data.fullName,
-            company_name: result.data.companyName || result.data.fullName + "'s Company",
+            company_name: result.data.companyName,
             phone: result.data.phone,
           },
           emailRedirectTo: `${window.location.origin}/`,
