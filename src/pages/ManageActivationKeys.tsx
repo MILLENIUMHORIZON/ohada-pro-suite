@@ -18,6 +18,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ActivationKey {
   id: string;
@@ -35,16 +41,41 @@ export default function ManageActivationKeys() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [userPhone, setUserPhone] = useState("");
   const { toast } = useToast();
 
   // Form state
   const [keyType, setKeyType] = useState("standard");
   const [maxUses, setMaxUses] = useState("1");
   const [expiresInDays, setExpiresInDays] = useState("");
+  const [numberOfUsers, setNumberOfUsers] = useState("1");
+  const [duration, setDuration] = useState("1");
+  const [durationType, setDurationType] = useState("monthly");
 
   useEffect(() => {
     loadKeys();
+    loadUserProfile();
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (error) throw error;
+        setUserPhone(data?.phone || "");
+      }
+    } catch (error: any) {
+      console.error("Error loading user profile:", error);
+    }
+  };
 
   const loadKeys = async () => {
     try {
@@ -79,39 +110,54 @@ export default function ManageActivationKeys() {
     ).join("-");
   };
 
+  const calculateTotalAmount = () => {
+    const pricePerUser = 7;
+    const users = parseInt(numberOfUsers) || 1;
+    const durationValue = parseInt(duration) || 1;
+    
+    if (durationType === "monthly") {
+      return pricePerUser * users * durationValue;
+    } else {
+      // Annual: 12 months
+      return pricePerUser * users * 12 * durationValue;
+    }
+  };
+
   const handleCreateKey = async () => {
     try {
-      const newKey = generateKey();
-      const expiresAt = expiresInDays 
-        ? new Date(Date.now() + parseInt(expiresInDays) * 24 * 60 * 60 * 1000).toISOString()
-        : null;
+      if (!userPhone) {
+        toast({
+          title: "Erreur",
+          description: "Numéro de téléphone manquant. Veuillez le configurer dans vos paramètres.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      const { error } = await supabase.from("activation_keys").insert({
-        key: newKey,
-        key_type: keyType,
-        max_uses: parseInt(maxUses),
-        expires_at: expiresAt,
+      // Calculate total amount
+      const totalAmount = calculateTotalAmount();
+
+      // Call edge function to generate payment link
+      const { data, error } = await supabase.functions.invoke('generate-payment-link', {
+        body: {
+          amount: totalAmount,
+          phone: userPhone,
+        }
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Clé créée",
-        description: "La clé d'activation a été créée avec succès",
-      });
+      if (data?.paymentUrl) {
+        setPaymentUrl(data.paymentUrl);
+        setShowPaymentDialog(true);
+        setShowCreateDialog(false);
+      }
 
-      setShowCreateDialog(false);
-      loadKeys();
-      
-      // Reset form
-      setKeyType("standard");
-      setMaxUses("1");
-      setExpiresInDays("");
     } catch (error: any) {
       console.error("Error creating key:", error);
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de créer la clé",
+        description: error.message || "Impossible de générer le lien de paiement",
         variant: "destructive",
       });
     }
@@ -249,30 +295,57 @@ export default function ManageActivationKeys() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="standard">Standard - 7$/utilisateur/mois</SelectItem>
                   <SelectItem value="premium">Premium</SelectItem>
                   <SelectItem value="enterprise">Enterprise</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="space-y-2">
-              <Label>Nombre d'utilisations maximum</Label>
+              <Label>Nombre d'utilisateurs</Label>
               <Input
                 type="number"
                 min="1"
-                value={maxUses}
-                onChange={(e) => setMaxUses(e.target.value)}
+                value={numberOfUsers}
+                onChange={(e) => setNumberOfUsers(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Expiration (jours)</Label>
-              <Input
-                type="number"
-                min="0"
-                placeholder="Laissez vide pour aucune expiration"
-                value={expiresInDays}
-                onChange={(e) => setExpiresInDays(e.target.value)}
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Durée</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Période</Label>
+                <Select value={durationType} onValueChange={setDurationType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mois</SelectItem>
+                    <SelectItem value="yearly">Année(s)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Montant total:</span>
+                <span className="text-2xl font-bold text-primary">
+                  ${calculateTotalAmount()} USD
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {numberOfUsers} utilisateur(s) × {duration} {durationType === "monthly" ? "mois" : "année(s)"} × $7
+              </p>
             </div>
           </div>
           <AlertDialogFooter>
@@ -301,6 +374,22 @@ export default function ManageActivationKeys() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Paiement de l'activation</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full h-full">
+            <iframe
+              src={paymentUrl}
+              className="w-full h-full border-0 rounded-lg"
+              title="Payment Gateway"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
