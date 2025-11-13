@@ -67,6 +67,45 @@ export default function Accounting() {
     loadJournals();
     loadMoves();
     loadMetrics();
+
+    // Souscrire aux mises à jour en temps réel
+    const accountsChannel = supabase
+      .channel('accounts-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, () => {
+        loadAccounts();
+        loadMetrics();
+      })
+      .subscribe();
+
+    const journalsChannel = supabase
+      .channel('journals-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, () => {
+        loadJournals();
+      })
+      .subscribe();
+
+    const movesChannel = supabase
+      .channel('moves-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'account_moves' }, () => {
+        loadMoves();
+        loadMetrics();
+      })
+      .subscribe();
+
+    const moveLinesChannel = supabase
+      .channel('move-lines-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'account_move_lines' }, () => {
+        loadMetrics();
+      })
+      .subscribe();
+
+    // Nettoyer les souscriptions lors du démontage
+    return () => {
+      supabase.removeChannel(accountsChannel);
+      supabase.removeChannel(journalsChannel);
+      supabase.removeChannel(movesChannel);
+      supabase.removeChannel(moveLinesChannel);
+    };
   }, []);
 
   const loadAccounts = async () => {
