@@ -53,11 +53,20 @@ export default function Accounting() {
   const [journals, setJournals] = useState<any[]>([]);
   const [moves, setMoves] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalAssets: 0,
+    totalLiabilities: 0,
+    netResult: 0,
+    vatPayable: 0,
+    vatCollected: 0,
+    vatDeductible: 0,
+  });
 
   useEffect(() => {
     loadAccounts();
     loadJournals();
     loadMoves();
+    loadMetrics();
   }, []);
 
   const loadAccounts = async () => {
@@ -91,6 +100,88 @@ export default function Accounting() {
     if (data) setMoves(data);
   };
 
+  const loadMetrics = async () => {
+    // Charger tous les comptes avec leurs lignes d'écriture
+    const { data: accountsData } = await supabase
+      .from("accounts")
+      .select("id, code, type");
+
+    const { data: linesData } = await supabase
+      .from("account_move_lines")
+      .select(`
+        account_id,
+        debit,
+        credit,
+        move:account_moves!inner(state)
+      `);
+
+    if (!accountsData || !linesData) return;
+
+    // Filtrer uniquement les écritures validées
+    const postedLines = linesData.filter((line: any) => line.move?.state === 'posted');
+
+    // Calculer les soldes par compte
+    const accountBalances = new Map<string, number>();
+    postedLines.forEach((line: any) => {
+      const balance = accountBalances.get(line.account_id) || 0;
+      accountBalances.set(line.account_id, balance + (line.debit || 0) - (line.credit || 0));
+    });
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let vatCollected = 0;
+    let vatDeductible = 0;
+
+    accountsData.forEach((account: any) => {
+      const balance = accountBalances.get(account.id) || 0;
+      const code = account.code;
+
+      // Actifs (classes 2, 3, 4, 5) - solde débiteur
+      if (code.startsWith('2') || code.startsWith('3') || code.startsWith('4') || code.startsWith('5')) {
+        if (balance > 0) totalAssets += balance;
+      }
+
+      // Passifs (classe 1) - solde créditeur
+      if (code.startsWith('1')) {
+        if (balance < 0) totalLiabilities += Math.abs(balance);
+      }
+
+      // Produits (classe 7) - solde créditeur
+      if (code.startsWith('7')) {
+        if (balance < 0) totalIncome += Math.abs(balance);
+      }
+
+      // Charges (classe 6) - solde débiteur
+      if (code.startsWith('6')) {
+        if (balance > 0) totalExpense += balance;
+      }
+
+      // TVA collectée (compte 443x)
+      if (code.startsWith('443')) {
+        if (balance < 0) vatCollected += Math.abs(balance);
+      }
+
+      // TVA déductible (compte 445x)
+      if (code.startsWith('445')) {
+        if (balance > 0) vatDeductible += balance;
+      }
+    });
+
+    const netResult = totalIncome - totalExpense;
+    const vatPayable = vatCollected - vatDeductible;
+
+    setMetrics({
+      totalAssets,
+      totalLiabilities,
+      netResult,
+      vatPayable,
+      vatCollected,
+      vatDeductible,
+    });
+  };
+
   const handleEditJournal = (journalId: string) => {
     setSelectedJournalId(journalId);
     setIsJournalDialogOpen(true);
@@ -102,11 +193,6 @@ export default function Accounting() {
     loadJournals();
   };
 
-  useEffect(() => {
-    loadAccounts();
-    loadJournals();
-    loadMoves();
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -144,7 +230,13 @@ export default function Accounting() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">125M CDF</div>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR', { 
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+              }).format(metrics.totalAssets)} CDF
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -154,7 +246,13 @@ export default function Accounting() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">85M CDF</div>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR', { 
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+              }).format(metrics.totalLiabilities)} CDF
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -164,7 +262,14 @@ export default function Accounting() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">+15M CDF</div>
+            <div className={`text-2xl font-bold ${metrics.netResult >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {metrics.netResult >= 0 ? '+' : ''}
+              {new Intl.NumberFormat('fr-FR', { 
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+              }).format(metrics.netResult)} CDF
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -174,7 +279,13 @@ export default function Accounting() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4M CDF</div>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('fr-FR', { 
+                style: 'decimal',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+              }).format(metrics.vatPayable)} CDF
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -413,7 +524,13 @@ export default function Accounting() {
                       <div className="font-semibold">TVA Collectée</div>
                       <div className="text-sm text-muted-foreground">Ventes du mois</div>
                     </div>
-                    <div className="text-2xl font-bold">7,240,000 CDF</div>
+                    <div className="text-2xl font-bold">
+                      {new Intl.NumberFormat('fr-FR', { 
+                        style: 'decimal',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0 
+                      }).format(metrics.vatCollected)} CDF
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg border border-border p-4">
@@ -422,7 +539,13 @@ export default function Accounting() {
                       <div className="font-semibold">TVA Déductible</div>
                       <div className="text-sm text-muted-foreground">Achats du mois</div>
                     </div>
-                    <div className="text-2xl font-bold">4,850,000 CDF</div>
+                    <div className="text-2xl font-bold">
+                      {new Intl.NumberFormat('fr-FR', { 
+                        style: 'decimal',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0 
+                      }).format(metrics.vatDeductible)} CDF
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg bg-primary/5 border border-primary p-4">
@@ -431,7 +554,13 @@ export default function Accounting() {
                       <div className="font-semibold text-primary">TVA à Payer</div>
                       <div className="text-sm text-muted-foreground">Solde à déclarer</div>
                     </div>
-                    <div className="text-2xl font-bold text-primary">2,390,000 CDF</div>
+                    <div className="text-2xl font-bold text-primary">
+                      {new Intl.NumberFormat('fr-FR', { 
+                        style: 'decimal',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0 
+                      }).format(metrics.vatPayable)} CDF
+                    </div>
                   </div>
                 </div>
               </div>
