@@ -14,6 +14,37 @@ interface LiaisonRequest {
   phone_etablissement: string
 }
 
+// Input validation
+function validateLiaisonRequest(data: any): { valid: boolean; error?: string } {
+  const requiredFields = [
+    'code_societe',
+    'code_etablissement',
+    'nom_etablissement',
+    'type_etablissement',
+    'administrateur_etablissement',
+    'phone_etablissement'
+  ]
+  
+  for (const field of requiredFields) {
+    if (!data[field] || typeof data[field] !== 'string' || data[field].trim() === '') {
+      return { valid: false, error: `Le champ ${field} est requis et doit être une chaîne non vide` }
+    }
+    
+    // Length validation
+    if (data[field].length > 500) {
+      return { valid: false, error: `Le champ ${field} est trop long (maximum 500 caractères)` }
+    }
+  }
+  
+  // Phone validation (basic format check)
+  const phoneRegex = /^[\d\s\+\-\(\)]+$/
+  if (!phoneRegex.test(data.phone_etablissement)) {
+    return { valid: false, error: 'Le numéro de téléphone contient des caractères invalides' }
+  }
+  
+  return { valid: true }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -26,37 +57,55 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Parse request body
-    const requestData: LiaisonRequest = await req.json()
+    let requestData: LiaisonRequest
     
-    console.log('Received liaison request:', requestData)
+    try {
+      requestData = await req.json()
+    } catch (error) {
+      console.error('Invalid JSON:', error)
+      return new Response(
+        JSON.stringify({ error: 'Format JSON invalide' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+    
+    console.log('Received liaison request:', {
+      code_societe: requestData.code_societe,
+      code_etablissement: requestData.code_etablissement,
+      nom_etablissement: requestData.nom_etablissement
+    })
 
-    // Validate required fields
-    const requiredFields = [
-      'code_societe',
-      'code_etablissement',
-      'nom_etablissement',
-      'type_etablissement',
-      'administrateur_etablissement',
-      'phone_etablissement'
-    ]
-    
-    for (const field of requiredFields) {
-      if (!requestData[field as keyof LiaisonRequest]) {
-        return new Response(
-          JSON.stringify({ error: `Le champ ${field} est requis` }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
+    // Validate input data
+    const validation = validateLiaisonRequest(requestData)
+    if (!validation.valid) {
+      console.error('Validation error:', validation.error)
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Sanitize input data
+    const sanitizedData: LiaisonRequest = {
+      code_societe: requestData.code_societe.trim(),
+      code_etablissement: requestData.code_etablissement.trim(),
+      nom_etablissement: requestData.nom_etablissement.trim(),
+      type_etablissement: requestData.type_etablissement.trim(),
+      administrateur_etablissement: requestData.administrateur_etablissement.trim(),
+      phone_etablissement: requestData.phone_etablissement.trim()
     }
 
     // Find company by company_code
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id')
-      .eq('company_code', requestData.code_societe)
+      .eq('company_code', sanitizedData.code_societe)
       .single()
 
     if (companyError || !company) {
@@ -72,11 +121,11 @@ Deno.serve(async (req) => {
 
     // Determine application type based on type_etablissement
     let applicationType: string
-    if (requestData.type_etablissement.toLowerCase().includes('resto') || 
-        requestData.type_etablissement.toLowerCase().includes('hotel')) {
+    if (sanitizedData.type_etablissement.toLowerCase().includes('resto') || 
+        sanitizedData.type_etablissement.toLowerCase().includes('hotel')) {
       applicationType = 'loyambo_resto_hotel'
-    } else if (requestData.type_etablissement.toLowerCase().includes('payroll') || 
-               requestData.type_etablissement.toLowerCase().includes('paie')) {
+    } else if (sanitizedData.type_etablissement.toLowerCase().includes('payroll') || 
+               sanitizedData.type_etablissement.toLowerCase().includes('paie')) {
       applicationType = 'millenium_payroll'
     } else {
       applicationType = 'other'
@@ -88,15 +137,15 @@ Deno.serve(async (req) => {
       .insert({
         company_id: company.id,
         application_type: applicationType,
-        application_name: requestData.nom_etablissement,
+        application_name: sanitizedData.nom_etablissement,
         status: 'pending',
         requested_by: company.id, // Using company_id as placeholder since it's external
-        code_etablissement: requestData.code_etablissement,
-        nom_etablissement: requestData.nom_etablissement,
-        type_etablissement: requestData.type_etablissement,
-        administrateur_etablissement: requestData.administrateur_etablissement,
-        phone_etablissement: requestData.phone_etablissement,
-        request_message: `Demande de liaison externe de ${requestData.nom_etablissement} (${requestData.code_etablissement})`
+        code_etablissement: sanitizedData.code_etablissement,
+        nom_etablissement: sanitizedData.nom_etablissement,
+        type_etablissement: sanitizedData.type_etablissement,
+        administrateur_etablissement: sanitizedData.administrateur_etablissement,
+        phone_etablissement: sanitizedData.phone_etablissement,
+        request_message: `Demande de liaison externe de ${sanitizedData.nom_etablissement} (${sanitizedData.code_etablissement})`
       })
       .select()
       .single()
