@@ -175,16 +175,29 @@ export default function ApplicationLiaisons() {
       {companyCode && (
         <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-2">
-                Code Entreprise
-              </p>
-              <p className="text-5xl font-bold text-primary tracking-wider">
-                {companyCode}
-              </p>
-              <p className="text-sm text-muted-foreground mt-3">
-                Communiquez ce code aux applications tierces pour recevoir des demandes de liaison
-              </p>
+            <div className="text-center space-y-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Code Entreprise
+                </p>
+                <p className="text-5xl font-bold text-primary tracking-wider">
+                  {companyCode}
+                </p>
+              </div>
+              
+              <div className="border-t border-border pt-6">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Endpoint de liaison
+                </p>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                  <code className="text-sm break-all text-foreground">
+                    https://hvdhbiwzfkssmnftbpvs.supabase.co/functions/v1/liaison-request
+                  </code>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Les applications tierces doivent envoyer leurs demandes en POST à cette URL avec le code entreprise
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
