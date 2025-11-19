@@ -377,17 +377,12 @@ export default function ManageActivationKeys() {
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Paiement de l'activation</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 w-full h-full">
-            <iframe
-              src={paymentUrl}
-              className="w-full h-full border-0 rounded-lg"
-              title="Payment Gateway"
-            />
-          </div>
+        <DialogContent className="max-w-4xl h-[80vh] p-0">
+          <iframe
+            src={paymentUrl}
+            className="w-full h-full border-0 rounded-lg"
+            title="Payment Gateway"
+          />
         </DialogContent>
       </Dialog>
     </div>
