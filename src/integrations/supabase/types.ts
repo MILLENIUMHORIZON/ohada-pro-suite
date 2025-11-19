@@ -762,6 +762,7 @@ export type Database = {
       payment_attempts: {
         Row: {
           amount: number
+          company_id: string | null
           created_at: string
           duration: number
           duration_type: string
@@ -777,6 +778,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          company_id?: string | null
           created_at?: string
           duration: number
           duration_type: string
@@ -792,6 +794,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          company_id?: string | null
           created_at?: string
           duration?: number
           duration_type?: string
@@ -805,7 +808,15 @@ export type Database = {
           user_id?: string
           uuid?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
