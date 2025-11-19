@@ -32,6 +32,11 @@ interface Liaison {
   response_message: string | null;
   created_at: string;
   approved_at: string | null;
+  code_etablissement: string | null;
+  nom_etablissement: string | null;
+  type_etablissement: string | null;
+  administrateur_etablissement: string | null;
+  phone_etablissement: string | null;
 }
 
 export default function ApplicationLiaisons() {
@@ -42,6 +47,7 @@ export default function ApplicationLiaisons() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newLiasonName, setNewLiasonName] = useState("");
   const [newLiasonMessage, setNewLiasonMessage] = useState("");
+  const [companyCode, setCompanyCode] = useState<string>("");
 
   const appName = appId && appId in applicationNames 
     ? applicationNames[appId as ApplicationType] 
@@ -49,7 +55,35 @@ export default function ApplicationLiaisons() {
 
   useEffect(() => {
     loadLiaisons();
+    loadCompanyCode();
   }, [appId]);
+
+  const loadCompanyCode = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile?.company_id) {
+        const { data: company } = await supabase
+          .from("companies")
+          .select("company_code")
+          .eq("id", profile.company_id)
+          .single();
+
+        if (company?.company_code) {
+          setCompanyCode(company.company_code);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error loading company code:", error);
+    }
+  };
 
   const loadLiaisons = async () => {
     try {
@@ -137,6 +171,25 @@ export default function ApplicationLiaisons() {
 
   return (
     <div className="space-y-6">
+      {/* Company Code Display */}
+      {companyCode && (
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                Code Entreprise
+              </p>
+              <p className="text-5xl font-bold text-primary tracking-wider">
+                {companyCode}
+              </p>
+              <p className="text-sm text-muted-foreground mt-3">
+                Communiquez ce code aux applications tierces pour recevoir des demandes de liaison
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -228,30 +281,36 @@ export default function ApplicationLiaisons() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nom</TableHead>
+                  <TableHead>Établissement</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Administrateur</TableHead>
+                  <TableHead>Téléphone</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Date de création</TableHead>
-                  <TableHead>Date d'approbation</TableHead>
-                  <TableHead>Message</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {liaisons.map((liaison) => (
                   <TableRow key={liaison.id}>
                     <TableCell className="font-medium">
-                      {liaison.application_name}
+                      {liaison.nom_etablissement || liaison.application_name}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {liaison.code_etablissement || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {liaison.type_etablissement || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {liaison.administrateur_etablissement || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {liaison.phone_etablissement || "-"}
                     </TableCell>
                     <TableCell>{getStatusBadge(liaison.status)}</TableCell>
                     <TableCell>
                       {format(new Date(liaison.created_at), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>
-                      {liaison.approved_at
-                        ? format(new Date(liaison.approved_at), "dd/MM/yyyy HH:mm")
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {liaison.request_message || "-"}
                     </TableCell>
                   </TableRow>
                 ))}
