@@ -759,6 +759,54 @@ export type Database = {
           },
         ]
       }
+      payment_attempts: {
+        Row: {
+          amount: number
+          created_at: string
+          duration: number
+          duration_type: string
+          id: string
+          key_type: string
+          number_of_users: number
+          payment_status: string
+          payment_url: string | null
+          phone: string
+          updated_at: string
+          user_id: string
+          uuid: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration: number
+          duration_type: string
+          id?: string
+          key_type: string
+          number_of_users: number
+          payment_status?: string
+          payment_url?: string | null
+          phone: string
+          updated_at?: string
+          user_id: string
+          uuid: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration?: number
+          duration_type?: string
+          id?: string
+          key_type?: string
+          number_of_users?: number
+          payment_status?: string
+          payment_url?: string | null
+          phone?: string
+          updated_at?: string
+          user_id?: string
+          uuid?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number

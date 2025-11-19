@@ -36,8 +36,23 @@ interface ActivationKey {
   is_active: boolean;
 }
 
+interface PaymentAttempt {
+  id: string;
+  uuid: string;
+  key_type: string;
+  number_of_users: number;
+  duration: number;
+  duration_type: string;
+  amount: number;
+  phone: string;
+  payment_status: string;
+  payment_url: string;
+  created_at: string;
+}
+
 export default function ManageActivationKeys() {
   const [keys, setKeys] = useState<ActivationKey[]>([]);
+  const [paymentAttempts, setPaymentAttempts] = useState<PaymentAttempt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
@@ -56,6 +71,7 @@ export default function ManageActivationKeys() {
 
   useEffect(() => {
     loadKeys();
+    loadPaymentAttempts();
     loadUserProfile();
   }, []);
 
@@ -95,6 +111,20 @@ export default function ManageActivationKeys() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPaymentAttempts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("payment_attempts")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPaymentAttempts(data || []);
+    } catch (error: any) {
+      console.error("Error loading payment attempts:", error);
     }
   };
 
@@ -142,6 +172,10 @@ export default function ManageActivationKeys() {
         body: {
           amount: totalAmount,
           phone: userPhone,
+          keyType: keyType,
+          numberOfUsers: parseInt(numberOfUsers),
+          duration: parseInt(duration),
+          durationType: durationType,
         }
       });
 
@@ -151,6 +185,11 @@ export default function ManageActivationKeys() {
         setPaymentUrl(data.paymentUrl);
         setShowPaymentDialog(true);
         setShowCreateDialog(false);
+        
+        toast({
+          title: "Lien de paiement généré",
+          description: "Veuillez procéder au paiement pour obtenir votre clé d'activation.",
+        });
       }
 
     } catch (error: any) {
@@ -200,6 +239,51 @@ export default function ManageActivationKeys() {
     });
   };
 
+  const checkPaymentStatus = async (uuid: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-payment-status', {
+        body: { uuid }
+      });
+
+      if (error) throw error;
+
+      if (data?.isPaid) {
+        toast({
+          title: "Paiement confirmé !",
+          description: `Votre clé d'activation : ${data.activationKey}`,
+        });
+        
+        // Reload both lists
+        loadKeys();
+        loadPaymentAttempts();
+      } else {
+        toast({
+          title: "Paiement en attente",
+          description: "Le paiement n'a pas encore été confirmé",
+          variant: "default",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error checking payment status:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de vérifier le statut du paiement",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getPaymentStatusBadge = (status: string) => {
+    const variants: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+      pending: { label: "En attente", variant: "secondary" },
+      completed: { label: "Payé", variant: "default" },
+      failed: { label: "Échoué", variant: "destructive" },
+    };
+    
+    const config = variants[status] || variants.pending;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
   const getKeyTypeBadge = (type: string) => {
     const variants: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       standard: { label: "Standard", variant: "default" },
@@ -223,6 +307,64 @@ export default function ManageActivationKeys() {
           Créer une clé
         </Button>
       </div>
+
+      {/* Payment Attempts Section */}
+      {paymentAttempts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tentatives de paiement</CardTitle>
+            <CardDescription>Historique de vos demandes d'activation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {paymentAttempts.map((attempt) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-3">
+                      <code className="font-mono font-semibold text-sm">UUID: {attempt.uuid}</code>
+                      {getKeyTypeBadge(attempt.key_type)}
+                      {getPaymentStatusBadge(attempt.payment_status)}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>Montant: ${attempt.amount}</span>
+                      <span>Utilisateurs: {attempt.number_of_users}</span>
+                      <span>Durée: {attempt.duration} {attempt.duration_type === 'monthly' ? 'mois' : 'an(s)'}</span>
+                      <span>Créée: {new Date(attempt.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {attempt.payment_status === 'pending' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPaymentUrl(attempt.payment_url);
+                            setShowPaymentDialog(true);
+                          }}
+                        >
+                          Voir paiement
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => checkPaymentStatus(attempt.uuid)}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Vérifier
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
