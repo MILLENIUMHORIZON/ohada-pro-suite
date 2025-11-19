@@ -35,6 +35,17 @@ serve(async (req) => {
       throw new Error('Invalid user');
     }
 
+    // Get user's company_id
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      throw new Error('User profile or company not found');
+    }
+
     // Générer UUID v4 (comme dans le code PHP)
     const uuid = crypto.randomUUID();
     
@@ -80,6 +91,7 @@ serve(async (req) => {
       .insert({
         uuid,
         user_id: user.id,
+        company_id: profile.company_id,
         key_type: keyType,
         number_of_users: numberOfUsers,
         duration,

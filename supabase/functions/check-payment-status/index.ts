@@ -109,7 +109,7 @@ serve(async (req) => {
         expiresAt = expirationDate.toISOString();
       }
 
-      // Create activation key
+      // Create activation key linked to the company
       const { error: keyError } = await supabase
         .from('activation_keys')
         .insert({
@@ -119,7 +119,8 @@ serve(async (req) => {
           current_uses: 0,
           expires_at: expiresAt,
           is_active: true,
-          created_by: user.id
+          created_by: user.id,
+          company_id: paymentAttempt.company_id
         });
 
       if (keyError) {
