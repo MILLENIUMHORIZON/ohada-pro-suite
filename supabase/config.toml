@@ -1,1 +1,4 @@
 project_id = "hvdhbiwzfkssmnftbpvs"
+
+[functions.liaison-request]
+verify_jwt = false
