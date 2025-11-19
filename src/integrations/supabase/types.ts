@@ -291,45 +291,60 @@ export type Database = {
       }
       application_liaisons: {
         Row: {
+          administrateur_etablissement: string | null
           application_name: string
           application_type: Database["public"]["Enums"]["application_type"]
           approved_at: string | null
           approved_by: string | null
+          code_etablissement: string | null
           company_id: string
           created_at: string
           id: string
+          nom_etablissement: string | null
+          phone_etablissement: string | null
           request_message: string | null
           requested_by: string
           response_message: string | null
           status: Database["public"]["Enums"]["liaison_status"]
+          type_etablissement: string | null
           updated_at: string
         }
         Insert: {
+          administrateur_etablissement?: string | null
           application_name: string
           application_type: Database["public"]["Enums"]["application_type"]
           approved_at?: string | null
           approved_by?: string | null
+          code_etablissement?: string | null
           company_id: string
           created_at?: string
           id?: string
+          nom_etablissement?: string | null
+          phone_etablissement?: string | null
           request_message?: string | null
           requested_by: string
           response_message?: string | null
           status?: Database["public"]["Enums"]["liaison_status"]
+          type_etablissement?: string | null
           updated_at?: string
         }
         Update: {
+          administrateur_etablissement?: string | null
           application_name?: string
           application_type?: Database["public"]["Enums"]["application_type"]
           approved_at?: string | null
           approved_by?: string | null
+          code_etablissement?: string | null
           company_id?: string
           created_at?: string
           id?: string
+          nom_etablissement?: string | null
+          phone_etablissement?: string | null
           request_message?: string | null
           requested_by?: string
           response_message?: string | null
           status?: Database["public"]["Enums"]["liaison_status"]
+          type_etablissement?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -345,6 +360,7 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          company_code: string | null
           country: string | null
           created_at: string | null
           currency: string | null
@@ -361,6 +377,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          company_code?: string | null
           country?: string | null
           created_at?: string | null
           currency?: string | null
@@ -377,6 +394,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          company_code?: string | null
           country?: string | null
           created_at?: string | null
           currency?: string | null
@@ -1926,6 +1944,7 @@ export type Database = {
           profile_exists: boolean
         }[]
       }
+      generate_company_code: { Args: never; Returns: string }
       get_next_sequence_number: {
         Args: { p_code: string; p_company_id: string }
         Returns: string
