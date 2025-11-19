@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Users, Cog, Database, Key, Shield } from "lucide-react";
+import { Building2, Users, Cog, Database, Key, Shield, Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const settingsSections = [
@@ -26,6 +26,12 @@ const settingsSections = [
     description: "Créer et gérer les clés d'activation (Admin)",
     icon: Shield,
     path: "/manage-keys",
+  },
+  {
+    title: "Gestion d'Applications",
+    description: "Lier l'ERP à d'autres applications",
+    icon: Link2,
+    path: "/application-management",
   },
   {
     title: "Configuration",
