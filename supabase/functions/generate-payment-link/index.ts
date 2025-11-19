@@ -16,7 +16,24 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, phone } = await req.json();
+    const { amount, phone, keyType, numberOfUsers, duration, durationType } = await req.json();
+    
+    // Get user ID from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      throw new Error('Invalid user');
+    }
 
     // Générer UUID v4 (comme dans le code PHP)
     const uuid = crypto.randomUUID();
@@ -56,6 +73,27 @@ serve(async (req) => {
     const paymentUrl = `https://pay.milleniumhorizon.com/?query=${encodeURIComponent(payload)}`;
 
     console.log('Payment link generated:', { uuid, amount, currency, phone });
+
+    // Store payment attempt in database
+    const { error: insertError } = await supabase
+      .from('payment_attempts')
+      .insert({
+        uuid,
+        user_id: user.id,
+        key_type: keyType,
+        number_of_users: numberOfUsers,
+        duration,
+        duration_type: durationType,
+        amount,
+        phone,
+        payment_url: paymentUrl,
+        payment_status: 'pending'
+      });
+
+    if (insertError) {
+      console.error('Error storing payment attempt:', insertError);
+      throw insertError;
+    }
 
     return new Response(
       JSON.stringify({ 
