@@ -244,6 +244,7 @@ export type Database = {
       }
       activation_keys: {
         Row: {
+          company_id: string | null
           created_at: string | null
           created_by: string | null
           current_uses: number | null
@@ -255,6 +256,7 @@ export type Database = {
           max_uses: number | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -266,6 +268,7 @@ export type Database = {
           max_uses?: number | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -276,7 +279,15 @@ export type Database = {
           key_type?: string
           max_uses?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activation_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       companies: {
         Row: {
