@@ -70,9 +70,17 @@ export default function ManageActivationKeys() {
   const [durationType, setDurationType] = useState("monthly");
 
   useEffect(() => {
-    loadKeys();
-    loadPaymentAttempts();
-    loadUserProfile();
+    // Force reload on mount to ensure fresh data for current company
+    const loadData = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        loadKeys(),
+        loadPaymentAttempts(),
+        loadUserProfile()
+      ]);
+      setIsLoading(false);
+    };
+    loadData();
   }, []);
 
   const loadUserProfile = async () => {
@@ -95,12 +103,18 @@ export default function ManageActivationKeys() {
 
   const loadKeys = async () => {
     try {
+      // RLS will automatically filter by company_id
       const { data, error } = await supabase
         .from("activation_keys")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading keys:", error);
+        throw error;
+      }
+      
+      console.log("Loaded activation keys:", data?.length || 0);
       setKeys(data || []);
     } catch (error: any) {
       console.error("Error loading keys:", error);
@@ -109,19 +123,23 @@ export default function ManageActivationKeys() {
         description: "Impossible de charger les clés d'activation",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const loadPaymentAttempts = async () => {
     try {
+      // RLS will automatically filter by company_id
       const { data, error } = await supabase
         .from("payment_attempts")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading payment attempts:", error);
+        throw error;
+      }
+      
+      console.log("Loaded payment attempts:", data?.length || 0);
       setPaymentAttempts(data || []);
     } catch (error: any) {
       console.error("Error loading payment attempts:", error);
