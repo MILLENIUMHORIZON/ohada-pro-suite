@@ -289,6 +289,59 @@ export type Database = {
           },
         ]
       }
+      application_liaisons: {
+        Row: {
+          application_name: string
+          application_type: Database["public"]["Enums"]["application_type"]
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          id: string
+          request_message: string | null
+          requested_by: string
+          response_message: string | null
+          status: Database["public"]["Enums"]["liaison_status"]
+          updated_at: string
+        }
+        Insert: {
+          application_name: string
+          application_type: Database["public"]["Enums"]["application_type"]
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          request_message?: string | null
+          requested_by: string
+          response_message?: string | null
+          status?: Database["public"]["Enums"]["liaison_status"]
+          updated_at?: string
+        }
+        Update: {
+          application_name?: string
+          application_type?: Database["public"]["Enums"]["application_type"]
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          request_message?: string | null
+          requested_by?: string
+          response_message?: string | null
+          status?: Database["public"]["Enums"]["liaison_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_liaisons_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -1895,10 +1948,12 @@ export type Database = {
         | "accountant"
         | "sales"
         | "stock_manager"
+      application_type: "loyambo_resto_hotel" | "millenium_payroll" | "other"
       cost_method: "fifo" | "average"
       invoice_status: "draft" | "posted" | "paid" | "cancelled"
       invoice_type: "customer" | "vendor" | "credit_note"
       journal_type: "sales" | "purchases" | "cash" | "bank" | "misc"
+      liaison_status: "pending" | "approved" | "rejected" | "active"
       location_type: "internal" | "supplier" | "customer" | "transit" | "scrap"
       move_status: "draft" | "posted"
       partner_type: "customer" | "vendor" | "both"
@@ -2042,10 +2097,12 @@ export const Constants = {
         "sales",
         "stock_manager",
       ],
+      application_type: ["loyambo_resto_hotel", "millenium_payroll", "other"],
       cost_method: ["fifo", "average"],
       invoice_status: ["draft", "posted", "paid", "cancelled"],
       invoice_type: ["customer", "vendor", "credit_note"],
       journal_type: ["sales", "purchases", "cash", "bank", "misc"],
+      liaison_status: ["pending", "approved", "rejected", "active"],
       location_type: ["internal", "supplier", "customer", "transit", "scrap"],
       move_status: ["draft", "posted"],
       partner_type: ["customer", "vendor", "both"],
