@@ -1865,6 +1865,14 @@ export type Database = {
         Args: { activation_key: string }
         Returns: Json
       }
+      debug_user_context: {
+        Args: never
+        Returns: {
+          auth_user_id: string
+          profile_company_id: string
+          profile_exists: boolean
+        }[]
+      }
       get_next_sequence_number: {
         Args: { p_code: string; p_company_id: string }
         Returns: string
