@@ -53,7 +53,7 @@ serve(async (req) => {
     const payload = btoa(data + '::' + hash);
 
     // Créer l'URL finale
-    const paymentUrl = `https://payment.milleniumhorizon.com?query=${encodeURIComponent(payload)}`;
+    const paymentUrl = `https://pay.milleniumhorizon.com/?query=${encodeURIComponent(payload)}`;
 
     console.log('Payment link generated:', { uuid, amount, currency, phone });
 
