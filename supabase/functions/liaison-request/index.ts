@@ -56,15 +56,31 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Log request details for debugging
+    console.log('Request method:', req.method)
+    console.log('Content-Type:', req.headers.get('content-type'))
+    
+    // Get raw body text first
+    const bodyText = await req.text()
+    console.log('Raw body:', bodyText)
+    
     // Parse request body
     let requestData: LiaisonRequest
     
     try {
-      requestData = await req.json()
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Corps de la requête vide')
+      }
+      requestData = JSON.parse(bodyText)
     } catch (error) {
-      console.error('Invalid JSON:', error)
+      console.error('JSON parsing error:', error)
+      console.error('Received body:', bodyText)
       return new Response(
-        JSON.stringify({ error: 'Format JSON invalide' }),
+        JSON.stringify({ 
+          error: 'Format JSON invalide',
+          details: error instanceof Error ? error.message : 'Erreur de parsing',
+          received: bodyText.substring(0, 100) // First 100 chars for debugging
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
