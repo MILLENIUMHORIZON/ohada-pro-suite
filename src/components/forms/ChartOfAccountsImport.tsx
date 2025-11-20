@@ -135,17 +135,22 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
         .select("code")
         .eq("company_id", profile.company_id);
       
-      const existingCodes = new Set(existingAccounts?.map(a => a.code) || []);
+      const existingCodes = new Set(existingAccounts?.map(a => a.code.trim()) || []);
       console.log("📊 Comptes existants:", existingCodes.size);
 
       // Import accounts one by one
       for (const account of accounts) {
         try {
+          const trimmedCode = account.code.trim();
+          
           // Skip if already exists
-          if (existingCodes.has(account.code)) {
-            errors.push(`Compte ${account.code}: Déjà existant (ignoré)`);
+          if (existingCodes.has(trimmedCode)) {
+            console.log(`⏭️ Compte ${trimmedCode}: Déjà existant (ignoré)`);
             continue;
           }
+          
+          // Add to existingCodes to prevent duplicates within the import batch
+          existingCodes.add(trimmedCode);
 
           // Map type aliases (revenue -> income, as per database schema)
           let accountType = account.type.toLowerCase();
