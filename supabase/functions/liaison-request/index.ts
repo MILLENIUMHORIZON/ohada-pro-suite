@@ -58,28 +58,42 @@ Deno.serve(async (req) => {
 
     // Log request details for debugging
     console.log('Request method:', req.method)
-    console.log('Content-Type:', req.headers.get('content-type'))
+    const contentType = req.headers.get('content-type') || ''
+    console.log('Content-Type:', contentType)
     
-    // Get raw body text first
-    const bodyText = await req.text()
-    console.log('Raw body:', bodyText)
-    
-    // Parse request body
+    // Parse request body based on content type
     let requestData: LiaisonRequest
     
     try {
-      if (!bodyText || bodyText.trim() === '') {
-        throw new Error('Corps de la requête vide')
+      if (contentType.includes('application/json')) {
+        // Handle JSON
+        requestData = await req.json()
+      } else if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
+        // Handle form data
+        const formData = await req.formData()
+        requestData = {
+          code_societe: formData.get('code_societe')?.toString() || '',
+          code_etablissement: formData.get('code_etablissement')?.toString() || '',
+          nom_etablissement: formData.get('nom_etablissement')?.toString() || '',
+          type_etablissement: formData.get('type_etablissement')?.toString() || '',
+          administrateur_etablissement: formData.get('administrateur_etablissement')?.toString() || '',
+          phone_etablissement: formData.get('phone_etablissement')?.toString() || ''
+        }
+      } else {
+        throw new Error('Type de contenu non supporté. Utilisez application/json ou multipart/form-data')
       }
-      requestData = JSON.parse(bodyText)
+      
+      console.log('Parsed request data:', {
+        code_societe: requestData.code_societe,
+        code_etablissement: requestData.code_etablissement,
+        nom_etablissement: requestData.nom_etablissement
+      })
     } catch (error) {
-      console.error('JSON parsing error:', error)
-      console.error('Received body:', bodyText)
+      console.error('Parsing error:', error)
       return new Response(
         JSON.stringify({ 
-          error: 'Format JSON invalide',
-          details: error instanceof Error ? error.message : 'Erreur de parsing',
-          received: bodyText.substring(0, 100) // First 100 chars for debugging
+          error: 'Erreur de parsing des données',
+          details: error instanceof Error ? error.message : 'Erreur inconnue'
         }),
         { 
           status: 400, 
