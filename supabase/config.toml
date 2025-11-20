@@ -2,3 +2,6 @@ project_id = "hvdhbiwzfkssmnftbpvs"
 
 [functions.liaison-request]
 verify_jwt = false
+
+[functions.check-liaison-status]
+verify_jwt = false

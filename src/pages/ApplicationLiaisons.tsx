@@ -48,6 +48,7 @@ export default function ApplicationLiaisons() {
   const [newLiasonName, setNewLiasonName] = useState("");
   const [newLiasonMessage, setNewLiasonMessage] = useState("");
   const [companyCode, setCompanyCode] = useState<string>("");
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   const appName = appId && appId in applicationNames 
     ? applicationNames[appId as ApplicationType] 
@@ -149,6 +150,36 @@ export default function ApplicationLiaisons() {
     }
   };
 
+  const handleAcceptLiaison = async (liaisonId: string) => {
+    try {
+      setAcceptingId(liaisonId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Vous devez être connecté");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("application_liaisons")
+        .update({
+          status: "approved" as LiaisonStatus,
+          approved_at: new Date().toISOString(),
+          approved_by: user.id
+        })
+        .eq("id", liaisonId);
+
+      if (error) throw error;
+
+      toast.success("Demande de liaison acceptée avec succès");
+      loadLiaisons();
+    } catch (error: any) {
+      toast.error("Erreur lors de l'acceptation de la demande");
+      console.error(error);
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
   const getStatusBadge = (status: LiaisonStatus) => {
     const statusConfig: Record<LiaisonStatus, { label: string; icon: any; variant: "outline" | "default" | "destructive" }> = {
       pending: { label: "En attente", icon: Clock, variant: "outline" },
@@ -182,20 +213,6 @@ export default function ApplicationLiaisons() {
                 </p>
                 <p className="text-5xl font-bold text-primary tracking-wider">
                   {companyCode}
-                </p>
-              </div>
-              
-              <div className="border-t border-border pt-6">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Endpoint de liaison
-                </p>
-                <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                  <code className="text-sm break-all text-foreground">
-                    https://hvdhbiwzfkssmnftbpvs.supabase.co/functions/v1/liaison-request
-                  </code>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Les applications tierces doivent envoyer leurs demandes en POST à cette URL avec le code entreprise
                 </p>
               </div>
             </div>
@@ -301,6 +318,7 @@ export default function ApplicationLiaisons() {
                   <TableHead>Téléphone</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -324,6 +342,17 @@ export default function ApplicationLiaisons() {
                     <TableCell>{getStatusBadge(liaison.status)}</TableCell>
                     <TableCell>
                       {format(new Date(liaison.created_at), "dd/MM/yyyy HH:mm")}
+                    </TableCell>
+                    <TableCell>
+                      {liaison.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcceptLiaison(liaison.id)}
+                          disabled={acceptingId === liaison.id}
+                        >
+                          {acceptingId === liaison.id ? "Acceptation..." : "Accepter"}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
