@@ -31,6 +31,7 @@ const productFormSchema = z.object({
   uom_id: z.string().optional(),
   type: z.enum(["stock", "service", "tax"]),
   product_type_code: z.string().optional(),
+  currency: z.string().min(1, "La devise est requise"),
   unit_price: z.string().min(1, "Le prix de vente est requis"),
   cost_price: z.string().optional(),
   description: z.string().optional(),
@@ -46,6 +47,7 @@ interface ProductFormProps {
 export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [uoms, setUoms] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [companyCountry, setCompanyCountry] = useState<string>("CD");
 
@@ -58,6 +60,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
       uom_id: "",
       type: "stock",
       product_type_code: "",
+      currency: "CDF",
       unit_price: "0",
       cost_price: "0",
       description: "",
@@ -68,6 +71,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
   useEffect(() => {
     loadCategories();
     loadUoms();
+    loadCurrencies();
     loadCompanyCountry();
   }, []);
 
@@ -120,6 +124,19 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
     setUoms(data || []);
   };
 
+  const loadCurrencies = async () => {
+    const { data, error } = await supabase
+      .from("currencies")
+      .select("id, code, name, symbol")
+      .order("code");
+    
+    if (error) {
+      toast.error("Erreur lors du chargement des devises");
+      return;
+    }
+    setCurrencies(data || []);
+  };
+
   const onSubmit = async (values: ProductFormValues) => {
     setIsLoading(true);
     try {
@@ -140,6 +157,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         uom_id: values.uom_id || null,
         type: values.type,
         product_type_code: values.product_type_code || null,
+        currency: values.currency,
         unit_price: parseFloat(values.unit_price),
         cost_price: parseFloat(values.cost_price || "0"),
         description: values.description || null,
@@ -291,6 +309,31 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
             />
           </div>
         )}
+
+        <FormField
+          control={form.control}
+          name="currency"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Devise *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une devise" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.id} value={currency.code}>
+                      {currency.code} - {currency.name} ({currency.symbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
