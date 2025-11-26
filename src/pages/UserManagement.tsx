@@ -239,24 +239,16 @@ export default function UserManagement() {
 
     setIsCreating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newUser),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: newUser,
+      });
 
-      const result = await response.json();
+      if (error) {
+        throw new Error(error.message || 'Erreur lors de la création');
+      }
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de la création');
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       toast.success("Utilisateur créé avec succès");
