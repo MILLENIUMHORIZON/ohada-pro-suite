@@ -1121,6 +1121,7 @@ export type Database = {
           cost_method: Database["public"]["Enums"]["cost_method"] | null
           cost_price: number | null
           created_at: string | null
+          currency: string | null
           description: string | null
           id: string
           name: string
@@ -1139,6 +1140,7 @@ export type Database = {
           cost_method?: Database["public"]["Enums"]["cost_method"] | null
           cost_price?: number | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           id?: string
           name: string
@@ -1157,6 +1159,7 @@ export type Database = {
           cost_method?: Database["public"]["Enums"]["cost_method"] | null
           cost_price?: number | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           id?: string
           name?: string
