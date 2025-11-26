@@ -149,7 +149,24 @@ export default function Auth() {
         password: result.data.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur connexion:", error);
+        
+        // Translate common login errors
+        let errorMessage = error.message;
+        
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Email ou mot de passe incorrect. Veuillez réessayer.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Veuillez confirmer votre email avant de vous connecter.";
+        } else if (error.message.includes("too many requests")) {
+          errorMessage = "Trop de tentatives de connexion. Veuillez patienter quelques minutes.";
+        } else {
+          errorMessage = "Impossible de se connecter. Veuillez vérifier vos identifiants.";
+        }
+        
+        throw new Error(errorMessage);
+      }
 
       // Check if account is expired
       if (data.user) {
@@ -179,9 +196,10 @@ export default function Auth() {
       });
       navigate("/");
     } catch (error: any) {
+      console.error("Erreur complète connexion:", error);
       toast({
         title: "Erreur de connexion",
-        description: error.message,
+        description: error.message || "Une erreur s'est produite lors de la connexion.",
         variant: "destructive",
       });
     } finally {
@@ -311,9 +329,28 @@ export default function Auth() {
       });
 
       if (error) {
-        // Show detailed error message to help with debugging
-        console.error("Signup error:", error);
-        throw new Error(error.message || "Erreur lors de la création du compte");
+        console.error("Erreur inscription:", error);
+        
+        // Translate common error messages to French
+        let errorMessage = error.message;
+        
+        if (error.message.includes("already registered") || error.message.includes("already exists")) {
+          errorMessage = "Un compte avec cet email existe déjà. Veuillez vous connecter.";
+        } else if (error.message.includes("invalid email")) {
+          errorMessage = "L'adresse email n'est pas valide.";
+        } else if (error.message.includes("password")) {
+          errorMessage = "Le mot de passe ne respecte pas les critères de sécurité.";
+        } else if (error.message.includes("database")) {
+          errorMessage = "Erreur lors de l'initialisation de votre compte. Veuillez réessayer.";
+        } else {
+          errorMessage = "Impossible de créer le compte. Veuillez vérifier vos informations et réessayer.";
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      if (!data.user) {
+        throw new Error("Erreur lors de la création du compte. Veuillez réessayer.");
       }
 
       toast({
@@ -321,12 +358,20 @@ export default function Auth() {
         description: "Votre compte démo est actif pour 15 jours. Vous pouvez maintenant vous connecter.",
       });
       
+      // Clear form
+      setSignupEmail("");
+      setSignupPassword("");
+      setFullName("");
+      setCompanyName("");
+      setPhone("");
+      
       // Switch to login tab
       document.querySelector('[value="login"]')?.dispatchEvent(new Event('click', { bubbles: true }));
     } catch (error: any) {
+      console.error("Erreur complète:", error);
       toast({
         title: "Erreur d'inscription",
-        description: error.message,
+        description: error.message || "Une erreur inattendue s'est produite. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
