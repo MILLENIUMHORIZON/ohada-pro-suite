@@ -29,7 +29,8 @@ const productFormSchema = z.object({
   sku: z.string().min(1, "La référence est requise"),
   category_id: z.string().optional(),
   uom_id: z.string().optional(),
-  type: z.enum(["stock", "service"]),
+  type: z.enum(["stock", "service", "tax"]),
+  product_type_code: z.string().optional(),
   unit_price: z.string().min(1, "Le prix de vente est requis"),
   cost_price: z.string().optional(),
   description: z.string().optional(),
@@ -46,6 +47,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [uoms, setUoms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [companyCountry, setCompanyCountry] = useState<string>("CD");
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -55,6 +57,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
       category_id: "",
       uom_id: "",
       type: "stock",
+      product_type_code: "",
       unit_price: "0",
       cost_price: "0",
       description: "",
@@ -65,7 +68,31 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
   useEffect(() => {
     loadCategories();
     loadUoms();
+    loadCompanyCountry();
   }, []);
+
+  const loadCompanyCountry = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .single();
+
+      if (profile?.company_id) {
+        const { data: company } = await supabase
+          .from("companies")
+          .select("country")
+          .eq("id", profile.company_id)
+          .single();
+
+        if (company) {
+          setCompanyCountry(company.country || "CD");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading company country:", error);
+    }
+  };
 
   const loadCategories = async () => {
     const { data, error } = await supabase
@@ -112,6 +139,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         category_id: values.category_id || null,
         uom_id: values.uom_id || null,
         type: values.type,
+        product_type_code: values.product_type_code || null,
         unit_price: parseFloat(values.unit_price),
         cost_price: parseFloat(values.cost_price || "0"),
         description: values.description || null,
@@ -168,15 +196,40 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    // Auto-fill product_type_code for RDC companies
+                    if (companyCountry === "CD") {
+                      const codeMap: Record<string, string> = {
+                        stock: "BIE",
+                        service: "SER",
+                        tax: "TAX",
+                      };
+                      form.setValue("product_type_code", codeMap[value] || "");
+                    }
+                  }} 
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="stock">Stockable</SelectItem>
-                    <SelectItem value="service">Service</SelectItem>
+                    {companyCountry === "CD" ? (
+                      <>
+                        <SelectItem value="stock">BIE - Bien (produit physique)</SelectItem>
+                        <SelectItem value="service">SER - Service</SelectItem>
+                        <SelectItem value="tax">TAX - Taxe / Redevance</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="stock">Stockable</SelectItem>
+                        <SelectItem value="service">Service</SelectItem>
+                        <SelectItem value="tax">Taxe</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />

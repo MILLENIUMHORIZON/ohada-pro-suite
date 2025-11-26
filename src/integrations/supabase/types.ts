@@ -1124,6 +1124,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          product_type_code: string | null
           sku: string
           tax_id: string | null
           type: Database["public"]["Enums"]["product_type"]
@@ -1141,6 +1142,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          product_type_code?: string | null
           sku: string
           tax_id?: string | null
           type?: Database["public"]["Enums"]["product_type"]
@@ -1158,6 +1160,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          product_type_code?: string | null
           sku?: string
           tax_id?: string | null
           type?: Database["public"]["Enums"]["product_type"]
@@ -1978,7 +1981,7 @@ export type Database = {
       move_status: "draft" | "posted"
       partner_type: "customer" | "vendor" | "both"
       payment_status: "draft" | "posted" | "cancelled"
-      product_type: "stock" | "service"
+      product_type: "stock" | "service" | "tax"
       sale_status: "draft" | "confirmed" | "done" | "cancelled"
       stock_move_status: "draft" | "confirmed" | "done" | "cancelled"
     }
@@ -2127,7 +2130,7 @@ export const Constants = {
       move_status: ["draft", "posted"],
       partner_type: ["customer", "vendor", "both"],
       payment_status: ["draft", "posted", "cancelled"],
-      product_type: ["stock", "service"],
+      product_type: ["stock", "service", "tax"],
       sale_status: ["draft", "confirmed", "done", "cancelled"],
       stock_move_status: ["draft", "confirmed", "done", "cancelled"],
     },
