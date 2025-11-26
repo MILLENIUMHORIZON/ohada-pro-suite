@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react";
+import { Building2, Mail, Lock, User, Phone, Eye, EyeOff, Globe } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -25,6 +26,7 @@ const signupSchema = z.object({
   fullName: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(100, "Le nom est trop long"),
   companyName: z.string().trim().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères").max(100, "Le nom de l'entreprise est trop long").optional().or(z.literal("")),
   phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Numéro de téléphone invalide").optional().or(z.literal("")),
+  country: z.string().min(2, "Le pays est requis"),
 });
 
 export default function Auth() {
@@ -47,6 +49,7 @@ export default function Auth() {
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("CD"); // Default to RDC
   
   // Recovery state
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -66,6 +69,7 @@ export default function Auth() {
       setFullName("");
       setCompanyName("");
       setPhone("");
+      setCountry("CD");
     };
 
     const parseHash = (h: string) => {
@@ -303,6 +307,7 @@ export default function Auth() {
         fullName: fullName,
         companyName: companyName || "",
         phone: phone || "",
+        country: country,
       });
 
       if (!result.success) {
@@ -323,6 +328,7 @@ export default function Auth() {
             full_name: result.data.fullName,
             company_name: result.data.companyName || result.data.fullName + "'s Company",
             phone: result.data.phone,
+            country: result.data.country,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -364,6 +370,7 @@ export default function Auth() {
       setFullName("");
       setCompanyName("");
       setPhone("");
+      setCountry("CD");
       
       // Switch to login tab
       document.querySelector('[value="login"]')?.dispatchEvent(new Event('click', { bubbles: true }));
@@ -556,6 +563,31 @@ export default function Auth() {
                       required
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-country">Pays *</Label>
+                  <Select value={country} onValueChange={setCountry} required>
+                    <SelectTrigger id="signup-country" className="w-full">
+                      <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Sélectionnez un pays" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CD">République Démocratique du Congo (RDC)</SelectItem>
+                      <SelectItem value="CG">République du Congo</SelectItem>
+                      <SelectItem value="CM">Cameroun</SelectItem>
+                      <SelectItem value="CI">Côte d'Ivoire</SelectItem>
+                      <SelectItem value="SN">Sénégal</SelectItem>
+                      <SelectItem value="GA">Gabon</SelectItem>
+                      <SelectItem value="BJ">Bénin</SelectItem>
+                      <SelectItem value="BF">Burkina Faso</SelectItem>
+                      <SelectItem value="ML">Mali</SelectItem>
+                      <SelectItem value="NE">Niger</SelectItem>
+                      <SelectItem value="TG">Togo</SelectItem>
+                      <SelectItem value="TD">Tchad</SelectItem>
+                      <SelectItem value="CF">République Centrafricaine</SelectItem>
+                      <SelectItem value="GQ">Guinée Équatoriale</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-phone">Téléphone</Label>
