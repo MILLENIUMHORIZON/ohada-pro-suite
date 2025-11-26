@@ -16,6 +16,7 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [overwriteExisting, setOverwriteExisting] = useState(false);
 
   const parseCSV = (text: string): any[] => {
     const lines = text.split('\n').filter(line => line.trim());
@@ -128,6 +129,23 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
       }
 
       console.log("🏢 Company ID:", profile.company_id);
+
+      // If overwrite mode, delete all existing accounts
+      if (overwriteExisting) {
+        console.log("🗑️ Mode écrasement activé - Suppression des comptes existants...");
+        const { error: deleteError } = await supabase
+          .from("accounts")
+          .delete()
+          .eq("company_id", profile.company_id);
+        
+        if (deleteError) {
+          console.error("❌ Erreur suppression:", deleteError);
+          toast.error("Erreur lors de la suppression des comptes existants");
+          setIsProcessing(false);
+          return;
+        }
+        console.log("✅ Comptes existants supprimés");
+      }
 
       // Check for existing accounts to avoid duplicates
       const { data: existingAccounts } = await supabase
@@ -430,6 +448,20 @@ export function ChartOfAccountsImport({ onSuccess }: { onSuccess: () => void }) 
             Fichier sélectionné: {file.name}
           </p>
         )}
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="overwrite"
+          checked={overwriteExisting}
+          onChange={(e) => setOverwriteExisting(e.target.checked)}
+          disabled={isProcessing}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        <Label htmlFor="overwrite" className="font-normal cursor-pointer">
+          Écraser le plan comptable existant (supprime tous les comptes actuels)
+        </Label>
       </div>
 
       {result && (
