@@ -1957,6 +1957,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_ohada_chart: { Args: { p_company_id: string }; Returns: undefined }
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "income" | "expense"
