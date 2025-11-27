@@ -86,10 +86,11 @@ export default function ReferenceData() {
       // Check if currencies already exist
       const { data: existingCurrencies } = await supabase
         .from("currencies")
-        .select("code")
+        .select("*")
         .eq("company_id", profile.company_id);
 
       const existingCodes = existingCurrencies?.map(c => c.code) || [];
+      const usdCurrency = existingCurrencies?.find(c => c.code === "USD");
 
       const currenciesToCreate = [];
 
@@ -105,21 +106,26 @@ export default function ReferenceData() {
         });
       }
 
-      // Create USD if not exists, with DGI rate
-      if (!existingCodes.includes("USD")) {
-        let usdRate = 2800; // Fallback rate
-        let rateSource = "Fallback";
+      // Get DGI rate
+      let usdRate = 2800; // Fallback rate
+      let rateSource = "Fallback";
 
-        try {
-          const { data: dgiData } = await supabase.functions.invoke("get-dgi-exchange-rate");
-          if (dgiData && dgiData.rate) {
-            usdRate = dgiData.rate;
-            rateSource = "DGI";
-          }
-        } catch (error) {
-          console.error("Failed to fetch DGI rate:", error);
+      try {
+        console.log("Fetching DGI exchange rate...");
+        const { data: dgiData, error: dgiError } = await supabase.functions.invoke("get-dgi-exchange-rate");
+        console.log("DGI response:", dgiData, dgiError);
+        
+        if (dgiData && dgiData.rate) {
+          usdRate = dgiData.rate;
+          rateSource = "DGI";
+          console.log("Using DGI rate:", usdRate);
         }
+      } catch (error) {
+        console.error("Failed to fetch DGI rate:", error);
+      }
 
+      // Create or update USD currency
+      if (!existingCodes.includes("USD")) {
         currenciesToCreate.push({
           company_id: profile.company_id,
           code: "USD",
@@ -128,6 +134,16 @@ export default function ReferenceData() {
           rate: usdRate,
           is_base: false,
         });
+      } else if (usdCurrency && rateSource === "DGI" && !usdCurrency.name.includes("DGI")) {
+        // Update existing USD with DGI rate if it doesn't have it yet
+        await supabase
+          .from("currencies")
+          .update({
+            rate: usdRate,
+            name: `Dollar Américain (Source: ${rateSource})`
+          })
+          .eq("id", usdCurrency.id);
+        console.log("Updated USD currency with DGI rate");
       }
 
       // Insert currencies if needed
@@ -363,10 +379,19 @@ export default function ReferenceData() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Devises</CardTitle>
-                <Button onClick={() => setIsCurrencyDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouvelle Devise
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={async () => {
+                    await initializeDefaultCurrencies();
+                    loadCurrencies();
+                    toast.success("Taux de change mis à jour depuis DGI");
+                  }}>
+                    Actualiser taux DGI
+                  </Button>
+                  <Button onClick={() => setIsCurrencyDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouvelle Devise
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
