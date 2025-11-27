@@ -126,12 +126,38 @@ export default function ReferenceData() {
   const handleCurrencySubmit = async (formData: any) => {
     const { data: profile } = await supabase.from("profiles").select("company_id").single();
     
+    let rate = parseFloat(formData.rate);
+    let rateSource = "Manuel";
+
+    // For RDC companies, fetch USD rate from DGI if creating USD currency
+    if (formData.code.toUpperCase() === "USD") {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("country")
+        .eq("id", profile?.company_id)
+        .single();
+
+      if (company?.country === "CD") {
+        try {
+          const { data: dgiData } = await supabase.functions.invoke("get-dgi-exchange-rate");
+          if (dgiData && dgiData.rate) {
+            rate = dgiData.rate;
+            rateSource = "DGI";
+            toast.success(`Taux DGI récupéré: ${rate} CDF`);
+          }
+        } catch (error) {
+          console.error("Failed to fetch DGI rate:", error);
+          toast.warning("Impossible de récupérer le taux DGI, utilisation du taux manuel");
+        }
+      }
+    }
+    
     const { error } = await supabase.from("currencies").insert({
       company_id: profile?.company_id,
       code: formData.code.toUpperCase(),
-      name: formData.name,
+      name: `${formData.name} (Source: ${rateSource})`,
       symbol: formData.symbol,
-      rate: parseFloat(formData.rate),
+      rate: rate,
       is_base: formData.is_base === "true",
     });
 
