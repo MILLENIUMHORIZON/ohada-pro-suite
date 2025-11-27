@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     // Get invoice with dgi_uid
     const { data: invoice, error: invoiceError } = await supabaseClient
       .from('invoices')
-      .select('id, dgi_uid, number')
+      .select('id, dgi_uid, number, total_ttc, currency')
       .eq('id', invoiceId)
       .single();
 
@@ -53,6 +53,16 @@ Deno.serve(async (req) => {
 
     console.log('Confirming invoice with UID:', invoice.dgi_uid);
 
+    // Prepare the body for DGI CONFIRM endpoint
+    const confirmBody = {
+      total: invoice.total_ttc || 0,
+      vtotal: 0.00,
+      curCode: invoice.currency || 'CDF',
+      curRate: 1
+    };
+
+    console.log('Sending to DGI CONFIRM:', JSON.stringify(confirmBody, null, 2));
+
     // Call DGI CONFIRM endpoint
     const dgiResponse = await fetch(
       `https://developper.dgirdc.cd/edef/api/invoice/${invoice.dgi_uid}/CONFIRM`,
@@ -62,7 +72,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IkEyMTYxNTk5RXxDRDAxMDAyOTIzLTEiLCJyb2xlIjoiVGF4cGF5ZXIiLCJuYmYiOjE3NjQxNDk2NzgsImV4cCI6MTc2NDI4NDQwMCwiaWF0IjoxNzY0MTQ5Njc4LCJpc3MiOiJkZXZlbG9wcGVyLmRnaXJkYy5jZCIsImF1ZCI6ImRldmVsb3BwZXIuZGdpcmRjLmNkIn0.Ttu-lWJKWNlrLXmPQ9im7tbKtpQq3QcsNfcP5gCieB4',
         },
-        body: JSON.stringify({})
+        body: JSON.stringify(confirmBody)
       }
     );
 
