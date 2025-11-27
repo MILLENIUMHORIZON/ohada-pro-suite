@@ -143,11 +143,12 @@ Deno.serve(async (req) => {
     
     console.log('QR code extracted successfully (length):', qrCode.length);
 
-    // Update invoice with QR code
+    // Update invoice with QR code and full normalization data
     const { error: updateError } = await supabaseClient
       .from('invoices')
       .update({ 
         dgi_qrcode: qrCode,
+        dgi_normalization_data: dgiResult, // Store complete DGI response
         status: 'posted' // Mark as posted when normalized
       })
       .eq('id', invoiceId);
@@ -157,10 +158,13 @@ Deno.serve(async (req) => {
       throw new Error('Erreur lors de la sauvegarde du QR code');
     }
 
+    console.log('Invoice updated successfully with QR code and normalization data');
+
     return new Response(
       JSON.stringify({
         success: true,
         qrCode: qrCode,
+        normalizationData: dgiResult,
         message: 'Facture normalisée avec succès',
       }),
       {
