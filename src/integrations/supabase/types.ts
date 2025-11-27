@@ -669,6 +669,7 @@ export type Database = {
           created_at: string | null
           currency: string | null
           date: string
+          dgi_uid: string | null
           due_date: string | null
           id: string
           invoice_reference_type: string | null
@@ -690,6 +691,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           date?: string
+          dgi_uid?: string | null
           due_date?: string | null
           id?: string
           invoice_reference_type?: string | null
@@ -711,6 +713,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           date?: string
+          dgi_uid?: string | null
           due_date?: string | null
           id?: string
           invoice_reference_type?: string | null
