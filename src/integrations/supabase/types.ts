@@ -370,6 +370,7 @@ export type Database = {
           logo_url: string | null
           name: string
           nif: string | null
+          nim: string | null
           phone: string | null
           rccm: string | null
           registration_number: string | null
@@ -387,6 +388,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           nif?: string | null
+          nim?: string | null
           phone?: string | null
           rccm?: string | null
           registration_number?: string | null
@@ -404,6 +406,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           nif?: string | null
+          nim?: string | null
           phone?: string | null
           rccm?: string | null
           registration_number?: string | null
