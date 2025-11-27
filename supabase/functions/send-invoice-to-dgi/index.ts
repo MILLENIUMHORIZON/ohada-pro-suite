@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const dgiPayload = {
       nif: company.nif,
       rn: invoice.number,
-      mode: 'ttc', // Always use TTC mode since we work with tax-included prices
+      mode: 'ht', // Use HT mode since invoice_lines.unit_price stores HT prices
       isf: company.nim,
       type: invoice.invoice_type_code || 'FV',
       items: invoice.lines.map((line: any) => ({
