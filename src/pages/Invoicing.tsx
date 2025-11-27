@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, FileText, Download, Printer, Edit, CheckCircle, DollarSign, FileX, MoreVertical } from "lucide-react";
+import { Plus, Search, FileText, Download, Printer, Edit, CheckCircle, DollarSign, FileX, MoreVertical, Send, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
@@ -153,6 +153,8 @@ export default function Invoicing() {
         totalTTC: invoice.total_ttc,
         currency: invoice.currency,
         notes: invoice.notes,
+        dgi_uid: invoice.dgi_uid,
+        dgi_qrcode: invoice.dgi_qrcode,
       };
 
       generateInvoicePDF(invoiceData, 'download');
@@ -197,6 +199,8 @@ export default function Invoicing() {
         totalTTC: invoice.total_ttc,
         currency: invoice.currency,
         notes: invoice.notes,
+        dgi_uid: invoice.dgi_uid,
+        dgi_qrcode: invoice.dgi_qrcode,
       };
 
       generateInvoicePDF(invoiceData, 'print');
@@ -219,6 +223,46 @@ export default function Invoicing() {
       loadInvoices();
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la validation");
+    }
+  };
+
+  const handleSendToDGI = async (invoiceId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invoice-to-dgi', {
+        body: { invoiceId },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`Facture envoyée à la DGI. UID: ${data.dgi_uid}`);
+        loadInvoices();
+      } else {
+        throw new Error(data.error || 'Erreur inconnue');
+      }
+    } catch (error: any) {
+      console.error('Error sending to DGI:', error);
+      toast.error(error.message || "Erreur lors de l'envoi à la DGI");
+    }
+  };
+
+  const handleNormalize = async (invoiceId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('confirm-invoice-dgi', {
+        body: { invoiceId },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("Facture normalisée avec succès. Le QR code a été généré.");
+        loadInvoices();
+      } else {
+        throw new Error(data.error || 'Erreur inconnue');
+      }
+    } catch (error: any) {
+      console.error('Error normalizing invoice:', error);
+      toast.error(error.message || "Erreur lors de la normalisation");
     }
   };
 
@@ -417,7 +461,7 @@ export default function Invoicing() {
                     <TableHead>Date</TableHead>
                     <TableHead>Échéance</TableHead>
                     <TableHead>Montant</TableHead>
-                    <TableHead>DGI UID</TableHead>
+                    <TableHead>Statut DGI</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -436,10 +480,19 @@ export default function Invoicing() {
                         }).format(invoice.total_ttc)} {invoice.currency}
                       </TableCell>
                       <TableCell>
-                        {invoice.dgi_uid ? (
-                          <span className="text-xs font-mono text-muted-foreground">{invoice.dgi_uid}</span>
+                        {invoice.dgi_qrcode ? (
+                          <Badge variant="default" className="bg-green-600">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Normalisée
+                          </Badge>
+                        ) : invoice.dgi_uid ? (
+                          <Badge variant="secondary">
+                            Envoyée
+                          </Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
+                          <Badge variant="outline">
+                            Non envoyée
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -496,6 +549,18 @@ export default function Invoicing() {
                               <Printer className="mr-2 h-4 w-4" />
                               Imprimer
                             </DropdownMenuItem>
+                            {invoice.status !== 'draft' && !invoice.dgi_uid && (
+                              <DropdownMenuItem onClick={() => handleSendToDGI(invoice.id)}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Envoyer à la DGI
+                              </DropdownMenuItem>
+                            )}
+                            {invoice.dgi_uid && !invoice.dgi_qrcode && (
+                              <DropdownMenuItem onClick={() => handleNormalize(invoice.id)}>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Normaliser
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

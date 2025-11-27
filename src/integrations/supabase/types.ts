@@ -669,6 +669,7 @@ export type Database = {
           created_at: string | null
           currency: string | null
           date: string
+          dgi_qrcode: string | null
           dgi_uid: string | null
           due_date: string | null
           id: string
@@ -691,6 +692,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           date?: string
+          dgi_qrcode?: string | null
           dgi_uid?: string | null
           due_date?: string | null
           id?: string
@@ -713,6 +715,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           date?: string
+          dgi_qrcode?: string | null
           dgi_uid?: string | null
           due_date?: string | null
           id?: string
