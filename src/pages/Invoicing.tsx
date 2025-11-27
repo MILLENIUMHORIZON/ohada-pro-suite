@@ -158,7 +158,7 @@ export default function Invoicing() {
         dgi_normalization_data: invoice.dgi_normalization_data,
       };
 
-      generateInvoicePDF(invoiceData, 'download');
+      await generateInvoicePDF(invoiceData, 'download');
       toast.success("Facture téléchargée");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -205,7 +205,7 @@ export default function Invoicing() {
         dgi_normalization_data: invoice.dgi_normalization_data,
       };
 
-      generateInvoicePDF(invoiceData, 'print');
+      await generateInvoicePDF(invoiceData, 'print');
     } catch (error) {
       console.error("Error printing PDF:", error);
       toast.error("Erreur lors de l'impression");
