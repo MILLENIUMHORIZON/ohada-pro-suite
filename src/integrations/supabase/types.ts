@@ -1975,6 +1975,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_default_invoice_sequences: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
       insert_default_taxes_rdc: {
         Args: { p_company_id: string }
         Returns: undefined
