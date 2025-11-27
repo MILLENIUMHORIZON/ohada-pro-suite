@@ -417,6 +417,7 @@ export default function Invoicing() {
                     <TableHead>Date</TableHead>
                     <TableHead>Échéance</TableHead>
                     <TableHead>Montant</TableHead>
+                    <TableHead>DGI UID</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -433,6 +434,13 @@ export default function Invoicing() {
                           minimumFractionDigits: 2, 
                           maximumFractionDigits: 2 
                         }).format(invoice.total_ttc)} {invoice.currency}
+                      </TableCell>
+                      <TableCell>
+                        {invoice.dgi_uid ? (
+                          <span className="text-xs font-mono text-muted-foreground">{invoice.dgi_uid}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
