@@ -480,20 +480,27 @@ export default function Invoicing() {
                         }).format(invoice.total_ttc)} {invoice.currency}
                       </TableCell>
                       <TableCell>
-                        {invoice.dgi_qrcode ? (
-                          <Badge variant="default" className="bg-green-600">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Normalisée
-                          </Badge>
-                        ) : invoice.dgi_uid ? (
-                          <Badge variant="secondary">
-                            Envoyée
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            Non envoyée
-                          </Badge>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {invoice.dgi_qrcode ? (
+                            <Badge variant="default" className="bg-green-600">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Normalisée
+                            </Badge>
+                          ) : invoice.dgi_uid ? (
+                            <Badge variant="secondary">
+                              Envoyée
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              Non envoyée
+                            </Badge>
+                          )}
+                          {invoice.dgi_uid && (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {invoice.dgi_uid}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
