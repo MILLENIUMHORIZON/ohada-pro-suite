@@ -263,6 +263,28 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
         );
       }
 
+      // Send to DGI after creation/update
+      if (invoiceData?.id) {
+        try {
+          const { data: dgiData, error: dgiError } = await supabase.functions.invoke(
+            'send-invoice-to-dgi',
+            {
+              body: { invoiceId: invoiceData.id }
+            }
+          );
+
+          if (dgiError) {
+            console.error('DGI error:', dgiError);
+            toast.error("Facture enregistrée mais erreur lors de l'envoi à la DGI");
+          } else if (dgiData?.success) {
+            console.log('DGI UID:', dgiData.dgi_uid);
+            toast.success(`Facture envoyée à la DGI (UID: ${dgiData.dgi_uid})`);
+          }
+        } catch (dgiErr) {
+          console.error('DGI send error:', dgiErr);
+        }
+      }
+
       toast.success(invoice ? "Facture mise à jour avec succès" : "Facture et écritures comptables créées avec succès");
       form.reset();
       onSuccess?.();
