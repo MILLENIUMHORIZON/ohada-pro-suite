@@ -36,10 +36,10 @@ Deno.serve(async (req) => {
 
     console.log('Confirming invoice with DGI:', invoiceId);
 
-    // Get invoice with dgi_uid
+    // Get invoice with dgi_uid and all details
     const { data: invoice, error: invoiceError } = await supabaseClient
       .from('invoices')
-      .select('id, dgi_uid, number, total_ttc, currency')
+      .select('id, dgi_uid, number, total_ttc, total_ht, currency')
       .eq('id', invoiceId)
       .single();
 
@@ -54,14 +54,16 @@ Deno.serve(async (req) => {
     console.log('Confirming invoice with UID:', invoice.dgi_uid);
 
     // Prepare the body for DGI CONFIRM endpoint
+    // Note: "total" should be HT (before tax), DGI will calculate TTC
     const confirmBody = {
-      total: invoice.total_ttc || 0,
+      total: invoice.total_ht || 0,  // Montant HT
       vtotal: 0.00,
       curCode: invoice.currency || 'CDF',
       curRate: 1
     };
 
     console.log('Sending to DGI CONFIRM:', JSON.stringify(confirmBody, null, 2));
+    console.log('Invoice totals - HT:', invoice.total_ht, 'TTC:', invoice.total_ttc);
 
     // Call DGI CONFIRM endpoint
     const dgiResponse = await fetch(
