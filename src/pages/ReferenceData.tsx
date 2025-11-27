@@ -109,6 +109,7 @@ export default function ReferenceData() {
       // Get DGI rate
       let usdRate = 2800; // Fallback rate
       let rateSource = "Fallback";
+      let rateDate = null;
 
       try {
         console.log("Fetching DGI exchange rate...");
@@ -118,7 +119,8 @@ export default function ReferenceData() {
         if (dgiData && dgiData.rate) {
           usdRate = dgiData.rate;
           rateSource = "DGI";
-          console.log("Using DGI rate:", usdRate);
+          rateDate = dgiData.date;
+          console.log("Using DGI rate:", usdRate, "Date:", rateDate);
         }
       } catch (error) {
         console.error("Failed to fetch DGI rate:", error);
@@ -133,17 +135,20 @@ export default function ReferenceData() {
           symbol: "$",
           rate: usdRate,
           is_base: false,
+          last_updated: rateDate || new Date().toISOString(),
         });
-      } else if (usdCurrency && rateSource === "DGI" && !usdCurrency.name.includes("DGI")) {
-        // Update existing USD with DGI rate if it doesn't have it yet
+      } else if (usdCurrency) {
+        // Always update USD with latest DGI rate for RDC companies
         await supabase
           .from("currencies")
           .update({
             rate: usdRate,
-            name: `Dollar Américain (Source: ${rateSource})`
+            name: `Dollar Américain (Source: ${rateSource})`,
+            last_updated: rateDate || new Date().toISOString(),
           })
           .eq("id", usdCurrency.id);
-        console.log("Updated USD currency with DGI rate");
+        console.log("Updated USD currency with DGI rate:", usdRate);
+        toast.success(`Taux USD mis à jour: ${usdRate} CDF`);
       }
 
       // Insert currencies if needed
@@ -151,6 +156,8 @@ export default function ReferenceData() {
         const { error } = await supabase.from("currencies").insert(currenciesToCreate);
         if (error) {
           console.error("Error creating default currencies:", error);
+        } else if (rateSource === "DGI") {
+          toast.success(`Taux USD DGI: ${usdRate} CDF`);
         }
       }
     } catch (error) {
@@ -402,6 +409,7 @@ export default function ReferenceData() {
                     <TableHead>Nom</TableHead>
                     <TableHead>Symbole</TableHead>
                     <TableHead className="text-right">Taux de Change</TableHead>
+                    <TableHead>Dernière mise à jour</TableHead>
                     <TableHead>Devise de Base</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -411,7 +419,18 @@ export default function ReferenceData() {
                       <TableCell className="font-mono font-semibold">{currency.code}</TableCell>
                       <TableCell>{currency.name}</TableCell>
                       <TableCell className="font-mono">{currency.symbol}</TableCell>
-                      <TableCell className="text-right font-mono">{currency.rate}</TableCell>
+                      <TableCell className="text-right font-mono">{currency.rate.toFixed(4)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {currency.last_updated 
+                          ? new Date(currency.last_updated).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : '-'}
+                      </TableCell>
                       <TableCell>{currency.is_base ? "✓" : ""}</TableCell>
                     </TableRow>
                   ))}
