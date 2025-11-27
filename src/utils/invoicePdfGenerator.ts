@@ -207,6 +207,9 @@ export async function generateInvoicePDF(invoice: InvoiceData, action: 'download
       if (invoice.dgi_uid) {
         doc.text(`UID: ${invoice.dgi_uid}`, 20, qrCodeY + 50);
       }
+      if (invoice.dgi_normalization_data?.codeDEFDGI) {
+        doc.text(`Code: ${invoice.dgi_normalization_data.codeDEFDGI}`, 20, qrCodeY + 55);
+      }
     } catch (error) {
       console.error('Error adding QR code to PDF:', error);
     }
