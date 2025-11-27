@@ -39,9 +39,19 @@ const statusConfig = {
   paid: { label: "Payée", variant: "default" as const },
 };
 
+const invoiceTypes = [
+  { code: 'FV', label: 'Facture de Vente', description: 'Factures de vente locales' },
+  { code: 'EV', label: 'Vente Export', description: 'Factures de vente à l\'export' },
+  { code: 'FT', label: 'Facture d\'Acompte', description: 'Factures d\'acompte' },
+  { code: 'FA', label: 'Avoir local (Correction)', description: 'Notes de crédit locales' },
+  { code: 'EA', label: 'Avoir Export', description: 'Notes de crédit export' },
+  { code: 'ET', label: 'Acompte Export', description: 'Acomptes export' },
+];
+
 export default function Invoicing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedInvoiceType, setSelectedInvoiceType] = useState<string | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isCreditNoteDialogOpen, setIsCreditNoteDialogOpen] = useState(false);
@@ -50,6 +60,7 @@ export default function Invoicing() {
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
   const [selectedInvoiceForCredit, setSelectedInvoiceForCredit] = useState<any>(null);
+  const [newInvoiceTypeCode, setNewInvoiceTypeCode] = useState<string>('FV');
 
   useEffect(() => {
     loadInvoices();
@@ -77,15 +88,16 @@ export default function Invoicing() {
     }
   };
 
-  // Filter invoices based on search and status
+  // Filter invoices based on search, status, and invoice type
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch = 
       invoice.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       invoice.partner?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+    const matchesType = !selectedInvoiceType || invoice.invoice_type_code === selectedInvoiceType;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   // Calculate stats from real invoices
@@ -218,227 +230,302 @@ export default function Invoicing() {
           <h1 className="text-3xl font-bold text-foreground">Facturation</h1>
           <p className="text-muted-foreground mt-1">Gestion des factures et paiements</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <FileText className="mr-2 h-4 w-4" />
-            Devis
+        {selectedInvoiceType && (
+          <Button variant="outline" onClick={() => setSelectedInvoiceType(null)}>
+            Retour aux types de factures
           </Button>
-          <Button onClick={() => setIsInvoiceDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvelle Facture
-          </Button>
-        </div>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Factures du Mois
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{monthlyInvoices.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {invoices.length} au total
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Montant Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">
-              {new Intl.NumberFormat('fr-FR', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-              }).format(totalAmount)} CDF
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Ce mois</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              À Encaisser
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">
-              {new Intl.NumberFormat('fr-FR', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-              }).format(amountToPay)} CDF
-            </div>
-            <p className="text-xs text-warning mt-1">
-              {unpaidInvoices.length} facture{unpaidInvoices.length > 1 ? 's' : ''} en attente
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              En Retard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">
-              {new Intl.NumberFormat('fr-FR', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-              }).format(overdueAmount)} CDF
-            </div>
-            <p className="text-xs text-destructive mt-1">
-              {overdueInvoices.length} facture{overdueInvoices.length > 1 ? 's' : ''} échue{overdueInvoices.length > 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Invoices Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle>Liste des Factures</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="posted">Validée</SelectItem>
-                  <SelectItem value="paid">Payée</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex w-72 items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-0 bg-muted/50"
-                />
-              </div>
-            </div>
+      {!selectedInvoiceType ? (
+        <>
+          {/* Invoice Type Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {invoiceTypes.map((type) => {
+              const typeInvoices = invoices.filter(inv => inv.invoice_type_code === type.code);
+              const typeAmount = typeInvoices.reduce((sum, inv) => sum + (inv.total_ttc || 0), 0);
+              
+              return (
+                <Card 
+                  key={type.code} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => setSelectedInvoiceType(type.code)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold">{type.code}</CardTitle>
+                          <p className="text-xs text-muted-foreground">{type.label}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total factures</span>
+                        <span className="text-2xl font-bold">{typeInvoices.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Montant total</span>
+                        <span className="text-sm font-mono font-semibold">
+                          {new Intl.NumberFormat('fr-FR', { 
+                            minimumFractionDigits: 0, 
+                            maximumFractionDigits: 0 
+                          }).format(typeAmount)} CDF
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                        {type.description}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Échéance</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.length > 0 ? filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{invoice.number}</TableCell>
-                  <TableCell>{invoice.partner?.name}</TableCell>
-                  <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
-                  <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                  <TableCell className="font-mono font-semibold">
-                    {new Intl.NumberFormat('fr-FR', { 
-                      minimumFractionDigits: 2, 
-                      maximumFractionDigits: 2 
-                    }).format(invoice.total_ttc)} {invoice.currency}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
-                      {statusConfig[invoice.status as keyof typeof statusConfig]?.label || invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {invoice.status === 'draft' && (
-                          <>
-                            <DropdownMenuItem onClick={() => {
-                              setEditingInvoice(invoice);
-                              setIsInvoiceDialogOpen(true);
-                            }}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Modifier
+        </>
+      ) : (
+        <>
+          {/* Header with action button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">
+                {invoiceTypes.find(t => t.code === selectedInvoiceType)?.label}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {invoiceTypes.find(t => t.code === selectedInvoiceType)?.description}
+              </p>
+            </div>
+            <Button onClick={() => {
+              setNewInvoiceTypeCode(selectedInvoiceType);
+              setIsInvoiceDialogOpen(true);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nouvelle Facture {selectedInvoiceType}
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Factures du Mois
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{monthlyInvoices.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {filteredInvoices.length} au total
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Montant Total
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {new Intl.NumberFormat('fr-FR', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  }).format(totalAmount)} CDF
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Ce mois</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  À Encaisser
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {new Intl.NumberFormat('fr-FR', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  }).format(amountToPay)} CDF
+                </div>
+                <p className="text-xs text-warning mt-1">
+                  {unpaidInvoices.length} facture{unpaidInvoices.length > 1 ? 's' : ''} en attente
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  En Retard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  {new Intl.NumberFormat('fr-FR', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  }).format(overdueAmount)} CDF
+                </div>
+                <p className="text-xs text-destructive mt-1">
+                  {overdueInvoices.length} facture{overdueInvoices.length > 1 ? 's' : ''} échue{overdueInvoices.length > 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Invoices Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <CardTitle>Liste des Factures</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les statuts</SelectItem>
+                      <SelectItem value="draft">Brouillon</SelectItem>
+                      <SelectItem value="posted">Validée</SelectItem>
+                      <SelectItem value="paid">Payée</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex w-72 items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="border-0 bg-muted/50"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Numéro</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Échéance</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.length > 0 ? filteredInvoices.map((invoice) => (
+                    <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableCell className="font-medium">{invoice.number}</TableCell>
+                      <TableCell>{invoice.partner?.name}</TableCell>
+                      <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                      <TableCell className="font-mono font-semibold">
+                        {new Intl.NumberFormat('fr-FR', { 
+                          minimumFractionDigits: 2, 
+                          maximumFractionDigits: 2 
+                        }).format(invoice.total_ttc)} {invoice.currency}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig[invoice.status as keyof typeof statusConfig]?.variant || "secondary"}>
+                          {statusConfig[invoice.status as keyof typeof statusConfig]?.label || invoice.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {invoice.status === 'draft' && (
+                              <>
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingInvoice(invoice);
+                                  setIsInvoiceDialogOpen(true);
+                                }}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleValidateInvoice(invoice)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Valider
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {invoice.status === 'posted' && (
+                              <>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedInvoiceForPayment(invoice);
+                                  setIsPaymentDialogOpen(true);
+                                }}>
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  Enregistrer un paiement
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedInvoiceForCredit(invoice);
+                                  setIsCreditNoteDialogOpen(true);
+                                }}>
+                                  <FileX className="mr-2 h-4 w-4" />
+                                  Créer une note de crédit
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Télécharger PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleValidateInvoice(invoice)}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Valider
+                            <DropdownMenuItem onClick={() => handlePrintInvoice(invoice)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Imprimer
                             </DropdownMenuItem>
-                          </>
-                        )}
-                        {invoice.status === 'posted' && (
-                          <>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedInvoiceForPayment(invoice);
-                              setIsPaymentDialogOpen(true);
-                            }}>
-                              <DollarSign className="mr-2 h-4 w-4" />
-                              Enregistrer un paiement
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedInvoiceForCredit(invoice);
-                              setIsCreditNoteDialogOpen(true);
-                            }}>
-                              <FileX className="mr-2 h-4 w-4" />
-                              Créer une note de crédit
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Télécharger PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePrintInvoice(invoice)}>
-                          <Printer className="mr-2 h-4 w-4" />
-                          Imprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    {invoices.length === 0 
-                      ? "Aucune facture enregistrée. Créez votre première facture pour commencer."
-                      : "Aucune facture ne correspond à votre recherche"}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        {invoices.length === 0 
+                          ? "Aucune facture enregistrée. Créez votre première facture pour commencer."
+                          : "Aucune facture ne correspond à votre recherche"}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <Dialog open={isInvoiceDialogOpen} onOpenChange={(open) => {
         setIsInvoiceDialogOpen(open);
-        if (!open) setEditingInvoice(null);
+        if (!open) {
+          setEditingInvoice(null);
+          setNewInvoiceTypeCode('FV');
+        }
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingInvoice ? "Modifier la Facture" : "Nouvelle Facture"}</DialogTitle>
+            <DialogTitle>{editingInvoice ? "Modifier la Facture" : `Nouvelle Facture ${newInvoiceTypeCode}`}</DialogTitle>
           </DialogHeader>
           <InvoiceForm 
             invoice={editingInvoice}
+            invoiceTypeCode={newInvoiceTypeCode}
             onSuccess={() => {
               setIsInvoiceDialogOpen(false);
               setEditingInvoice(null);
+              setNewInvoiceTypeCode('FV');
               loadInvoices();
             }} 
           />
