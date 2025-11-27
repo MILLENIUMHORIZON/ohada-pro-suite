@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
       .eq('id', profile.company_id)
       .single();
 
+    // Validate required company information
+    if (!company?.nif || !company?.nim) {
+      throw new Error('Les informations fiscales de l\'entreprise (NIF et NIM) doivent être renseignées dans les paramètres avant d\'envoyer une facture à la DGI.');
+    }
+
     // Get currency rate
     const { data: currency } = await supabaseClient
       .from('currencies')
@@ -101,10 +106,10 @@ Deno.serve(async (req) => {
 
     // Prepare DGI payload
     const dgiPayload = {
-      nif: company?.nif || '',
+      nif: company.nif,
       rn: invoice.number,
-      mode: invoice.price_mode?.toLowerCase() || 'ttc',
-      isf: company?.nim || '',
+      mode: 'ttc', // Always use TTC mode since we work with tax-included prices
+      isf: company.nim,
       type: invoice.invoice_type_code || 'FV',
       items: invoice.lines.map((line: any) => ({
         code: line.product.sku,
