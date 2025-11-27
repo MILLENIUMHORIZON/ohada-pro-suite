@@ -37,6 +37,7 @@ const invoiceFormSchema = z.object({
   due_date: z.string().min(1, "L'échéance est requise"),
   number: z.string().optional(),
   invoice_reference_type: z.string().optional(),
+  price_mode: z.enum(["TTC", "HT"]),
   lines: z.array(invoiceLineSchema).min(1, "Au moins une ligne requise"),
 });
 
@@ -62,6 +63,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
       due_date: "",
       number: "",
       invoice_reference_type: "",
+      price_mode: "TTC",
       lines: [{ product_id: "", description: "", qty: "1", unit_price: "0", tax_id: "" }],
     },
   });
@@ -74,6 +76,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
         due_date: invoice.due_date,
         number: invoice.number,
         invoice_reference_type: invoice.invoice_reference_type || "",
+        price_mode: "TTC",
         lines: invoice.lines.map((line: any) => ({
           product_id: line.product_id,
           description: line.description || "",
@@ -119,18 +122,19 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
         return;
       }
 
-      // Calculer les totaux
+      // Calculer les totaux selon le mode de prix
       let totalHT = 0;
       let totalTax = 0;
+      const priceMode = values.price_mode;
 
       const linesWithTotals = await Promise.all(
         values.lines.map(async (line) => {
           const qty = parseFloat(line.qty);
-          const unitPrice = parseFloat(line.unit_price);
-          const subtotal = qty * unitPrice;
-          totalHT += subtotal;
-
+          const inputPrice = parseFloat(line.unit_price);
+          
+          let unitPriceHT = inputPrice;
           let taxAmount = 0;
+          
           if (line.tax_id) {
             const { data: tax } = await supabase
               .from("taxes")
@@ -138,20 +142,33 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
               .eq("id", line.tax_id)
               .single();
             
-            if (tax) {
-              taxAmount = (subtotal * tax.rate) / 100;
-              totalTax += taxAmount;
+            if (tax && tax.rate > 0) {
+              if (priceMode === "TTC") {
+                // Prix saisi est TTC, on calcule le HT
+                unitPriceHT = inputPrice / (1 + tax.rate / 100);
+                taxAmount = inputPrice - unitPriceHT;
+              } else {
+                // Prix saisi est HT, on calcule la taxe
+                unitPriceHT = inputPrice;
+                taxAmount = (inputPrice * tax.rate) / 100;
+              }
             }
           }
+
+          const subtotalHT = qty * unitPriceHT;
+          const subtotalTax = qty * taxAmount;
+          
+          totalHT += subtotalHT;
+          totalTax += subtotalTax;
 
           return {
             invoice_id: "",
             product_id: line.product_id,
             description: line.description || null,
             qty,
-            unit_price: unitPrice,
+            unit_price: unitPriceHT,
             tax_id: line.tax_id || null,
-            subtotal,
+            subtotal: subtotalHT,
           };
         })
       );
@@ -352,7 +369,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <FormField
             control={form.control}
             name="number"
@@ -390,6 +407,28 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="price_mode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mode de Prix *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="TTC">TTC (Toutes Taxes Comprises)</SelectItem>
+                    <SelectItem value="HT">HT (Hors Taxes)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
