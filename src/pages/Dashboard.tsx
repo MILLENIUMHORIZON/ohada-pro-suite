@@ -36,8 +36,7 @@ export default function Dashboard() {
     // Load customers
     const { data: customers } = await supabase
       .from("partners")
-      .select("id")
-      .eq("type", "customer");
+      .select("id");
 
     // Load products
     const { data: products } = await supabase

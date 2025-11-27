@@ -176,7 +176,7 @@ export default function CRM() {
           <CardContent>
             <div className="text-2xl font-bold">{totalPartners}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {partners.filter(p => p.type === 'customer').length} client{partners.filter(p => p.type === 'customer').length > 1 ? 's' : ''} • {partners.filter(p => p.type === 'vendor').length} fournisseur{partners.filter(p => p.type === 'vendor').length > 1 ? 's' : ''}
+              Total partenaires enregistrés
             </p>
           </CardContent>
         </Card>
@@ -243,8 +243,11 @@ export default function CRM() {
                       <TableCell>{partner.phone || "-"}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {partner.type === "customer" ? "Client" : 
-                           partner.type === "vendor" ? "Fournisseur" : "Les deux"}
+                          {partner.type === "PP" ? "Personne physique" : 
+                           partner.type === "PM" ? "Personne morale" :
+                           partner.type === "PC" ? "Personne physique commerçante" :
+                           partner.type === "PL" ? "Profession libérale" :
+                           "Ambassades et organisations internationales"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{partner.nif || "-"}</TableCell>
@@ -339,7 +342,7 @@ export default function CRM() {
           <PartnerForm 
             partnerId={editingPartner?.id}
             onSuccess={handleDialogClose}
-            defaultValues={editingPartner || { type: "customer" }}
+            defaultValues={editingPartner || { type: "PP" }}
           />
         </DialogContent>
       </Dialog>
