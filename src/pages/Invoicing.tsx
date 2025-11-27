@@ -155,6 +155,7 @@ export default function Invoicing() {
         notes: invoice.notes,
         dgi_uid: invoice.dgi_uid,
         dgi_qrcode: invoice.dgi_qrcode,
+        dgi_normalization_data: invoice.dgi_normalization_data,
       };
 
       generateInvoicePDF(invoiceData, 'download');
@@ -201,6 +202,7 @@ export default function Invoicing() {
         notes: invoice.notes,
         dgi_uid: invoice.dgi_uid,
         dgi_qrcode: invoice.dgi_qrcode,
+        dgi_normalization_data: invoice.dgi_normalization_data,
       };
 
       generateInvoicePDF(invoiceData, 'print');

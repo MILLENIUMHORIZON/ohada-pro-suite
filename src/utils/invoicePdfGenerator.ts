@@ -37,6 +37,7 @@ interface InvoiceData {
   notes?: string;
   dgi_uid?: string;
   dgi_qrcode?: string;
+  dgi_normalization_data?: any;
 }
 
 export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'print' = 'download') {
