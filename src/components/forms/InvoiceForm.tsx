@@ -360,7 +360,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
           <FormItem>
                 <FormLabel>Numéro (généré automatiquement)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Auto-généré: FA-0001" {...field} disabled />
+                  <Input placeholder={`Auto-généré: ${invoiceTypeCode}-0001`} {...field} disabled />
                 </FormControl>
                 <FormMessage />
               </FormItem>
