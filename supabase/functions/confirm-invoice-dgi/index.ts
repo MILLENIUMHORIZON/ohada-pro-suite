@@ -76,6 +76,14 @@ Deno.serve(async (req) => {
     console.log('DGI CONFIRM response:', JSON.stringify(dgiResult, null, 2));
     console.log('Response keys:', Object.keys(dgiResult));
 
+    // Check if DGI returned an error
+    if (dgiResult.errorCode || dgiResult.error_code || dgiResult.error) {
+      const errorCode = dgiResult.errorCode || dgiResult.error_code;
+      const errorDesc = dgiResult.errorDesc || dgiResult.error_desc || dgiResult.errorMessage || dgiResult.message || 'Erreur inconnue';
+      console.error('DGI returned error:', { errorCode, errorDesc });
+      throw new Error(`Erreur DGI (${errorCode}): ${errorDesc}`);
+    }
+
     // Try to extract QR code from various possible locations in response
     let qrCode = null;
     
@@ -120,7 +128,7 @@ Deno.serve(async (req) => {
 
     if (!qrCode) {
       console.error('No QR code found in response structure:', JSON.stringify(dgiResult, null, 2));
-      throw new Error('Le QR code n\'a pas été retourné par la DGI. Structure de réponse inattendue.');
+      throw new Error('Le QR code n\'a pas été retourné par la DGI. Veuillez vérifier que la facture a bien été envoyée à la DGI au préalable.');
     }
     
     console.log('QR code extracted successfully (length):', qrCode.length);
