@@ -182,11 +182,13 @@ export function PaymentForm({ invoice, onSuccess }: PaymentFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="bank_transfer">Virement bancaire</SelectItem>
-                  <SelectItem value="check">Chèque</SelectItem>
-                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                  <SelectItem value="card">Carte bancaire</SelectItem>
+                  <SelectItem value="ESPECES">ESPECES</SelectItem>
+                  <SelectItem value="MOBILEMONEY">MOBILE MONEY</SelectItem>
+                  <SelectItem value="VIREMENT">VIREMENT</SelectItem>
+                  <SelectItem value="CARTEBANCAIRE">CARTE BANCAIRE</SelectItem>
+                  <SelectItem value="CHEQUES">CHEQUES</SelectItem>
+                  <SelectItem value="CREDIT">CREDIT</SelectItem>
+                  <SelectItem value="AUTRE">AUTRE</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
