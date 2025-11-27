@@ -117,14 +117,26 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
   const onSubmit = async (data: JournalEntryFormValues) => {
     setLoading(true);
     try {
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Vous devez être connecté pour créer une écriture");
+        setLoading(false);
+        return;
+      }
+
       // Get user's company_id
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("company_id")
         .single();
 
-      if (!profile?.company_id) {
-        throw new Error("Company not found");
+      if (profileError || !profile?.company_id) {
+        console.error("Profile error:", profileError);
+        toast.error("Impossible de récupérer les informations de votre entreprise");
+        setLoading(false);
+        return;
       }
 
       // Generate entry number
@@ -174,9 +186,10 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
       toast.success("Écriture comptable créée avec succès");
       form.reset();
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating journal entry:", error);
-      toast.error("Erreur lors de la création de l'écriture");
+      const errorMessage = error?.message || "Erreur lors de la création de l'écriture";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

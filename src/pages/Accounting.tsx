@@ -249,14 +249,17 @@ export default function Accounting() {
 
       {/* Journal Entry Dialog */}
       <Dialog open={isJournalEntryDialogOpen} onOpenChange={setIsJournalEntryDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nouvelle Écriture Comptable</DialogTitle>
             <DialogDescription>
               Créer une nouvelle écriture comptable
             </DialogDescription>
           </DialogHeader>
-          <JournalEntryForm onSuccess={() => setIsJournalEntryDialogOpen(false)} />
+          <JournalEntryForm onSuccess={() => {
+            setIsJournalEntryDialogOpen(false);
+            loadMoves();
+          }} />
         </DialogContent>
       </Dialog>
 
