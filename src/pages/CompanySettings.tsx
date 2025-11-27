@@ -79,6 +79,7 @@ export default function CompanySettings() {
           nif: formData.nif,
           rccm: formData.rccm,
           id_nat: formData.id_nat,
+          nim: formData.nim,
         })
         .eq("id", profile.company_id);
 
@@ -146,9 +147,15 @@ export default function CompanySettings() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="id_nat">ID NAT</Label>
-                  <Input id="id_nat" {...register("id_nat")} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="id_nat">ID NAT</Label>
+                    <Input id="id_nat" {...register("id_nat")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nim">NIM</Label>
+                    <Input id="nim" {...register("nim")} />
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
