@@ -60,11 +60,87 @@ export default function ReferenceData() {
   };
 
   useEffect(() => {
-    loadTaxes();
-    loadUoms();
-    loadCategories();
-    loadCurrencies();
+    const initializeReferenceData = async () => {
+      await initializeDefaultCurrencies();
+      loadTaxes();
+      loadUoms();
+      loadCategories();
+      loadCurrencies();
+    };
+    initializeReferenceData();
   }, []);
+
+  const initializeDefaultCurrencies = async () => {
+    try {
+      const { data: profile } = await supabase.from("profiles").select("company_id").single();
+      if (!profile?.company_id) return;
+
+      const { data: company } = await supabase
+        .from("companies")
+        .select("country")
+        .eq("id", profile.company_id)
+        .single();
+
+      if (company?.country !== "CD") return;
+
+      // Check if currencies already exist
+      const { data: existingCurrencies } = await supabase
+        .from("currencies")
+        .select("code")
+        .eq("company_id", profile.company_id);
+
+      const existingCodes = existingCurrencies?.map(c => c.code) || [];
+
+      const currenciesToCreate = [];
+
+      // Create CDF if not exists
+      if (!existingCodes.includes("CDF")) {
+        currenciesToCreate.push({
+          company_id: profile.company_id,
+          code: "CDF",
+          name: "Franc Congolais (Devise de base)",
+          symbol: "FC",
+          rate: 1.0,
+          is_base: true,
+        });
+      }
+
+      // Create USD if not exists, with DGI rate
+      if (!existingCodes.includes("USD")) {
+        let usdRate = 2800; // Fallback rate
+        let rateSource = "Fallback";
+
+        try {
+          const { data: dgiData } = await supabase.functions.invoke("get-dgi-exchange-rate");
+          if (dgiData && dgiData.rate) {
+            usdRate = dgiData.rate;
+            rateSource = "DGI";
+          }
+        } catch (error) {
+          console.error("Failed to fetch DGI rate:", error);
+        }
+
+        currenciesToCreate.push({
+          company_id: profile.company_id,
+          code: "USD",
+          name: `Dollar Américain (Source: ${rateSource})`,
+          symbol: "$",
+          rate: usdRate,
+          is_base: false,
+        });
+      }
+
+      // Insert currencies if needed
+      if (currenciesToCreate.length > 0) {
+        const { error } = await supabase.from("currencies").insert(currenciesToCreate);
+        if (error) {
+          console.error("Error creating default currencies:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing default currencies:", error);
+    }
+  };
 
   const handleTaxSubmit = async (formData: any) => {
     const { data: profile } = await supabase.from("profiles").select("company_id").single();
