@@ -30,7 +30,7 @@ const partnerFormSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   nif: z.string().optional(),
-  type: z.enum(["customer", "vendor", "both"]),
+  type: z.enum(["PP", "PM", "PC", "PL", "AO"]),
   account_id: z.string().optional(),
 });
 
@@ -54,7 +54,7 @@ export function PartnerForm({ onSuccess, defaultValues, partnerId }: PartnerForm
       phone: "",
       address: "",
       nif: "",
-      type: "customer",
+      type: "PP",
       account_id: "",
       ...defaultValues,
     },
@@ -204,17 +204,19 @@ export function PartnerForm({ onSuccess, defaultValues, partnerId }: PartnerForm
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type *</FormLabel>
+                <FormLabel>Type de personne *</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="customer">Client</SelectItem>
-                    <SelectItem value="vendor">Fournisseur</SelectItem>
-                    <SelectItem value="both">Client et Fournisseur</SelectItem>
+                    <SelectItem value="PP">PP - Personne physique</SelectItem>
+                    <SelectItem value="PM">PM - Personne morale</SelectItem>
+                    <SelectItem value="PC">PC - Personne physique commerçante</SelectItem>
+                    <SelectItem value="PL">PL - Profession libérale</SelectItem>
+                    <SelectItem value="AO">AO - Ambassades et organisations internationales</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

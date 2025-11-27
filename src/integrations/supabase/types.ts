@@ -1992,7 +1992,7 @@ export type Database = {
       liaison_status: "pending" | "approved" | "rejected" | "active"
       location_type: "internal" | "supplier" | "customer" | "transit" | "scrap"
       move_status: "draft" | "posted"
-      partner_type: "customer" | "vendor" | "both"
+      partner_type: "PP" | "PM" | "PC" | "PL" | "AO"
       payment_status: "draft" | "posted" | "cancelled"
       product_type: "stock" | "service" | "tax"
       sale_status: "draft" | "confirmed" | "done" | "cancelled"
@@ -2141,7 +2141,7 @@ export const Constants = {
       liaison_status: ["pending", "approved", "rejected", "active"],
       location_type: ["internal", "supplier", "customer", "transit", "scrap"],
       move_status: ["draft", "posted"],
-      partner_type: ["customer", "vendor", "both"],
+      partner_type: ["PP", "PM", "PC", "PL", "AO"],
       payment_status: ["draft", "posted", "cancelled"],
       product_type: ["stock", "service", "tax"],
       sale_status: ["draft", "confirmed", "done", "cancelled"],
