@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 
 interface InvoiceLine {
   description: string;
@@ -40,7 +41,7 @@ interface InvoiceData {
   dgi_normalization_data?: any;
 }
 
-export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'print' = 'download') {
+export async function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'print' = 'download') {
   const doc = new jsPDF();
   
   let startY = 20;
@@ -192,12 +193,13 @@ export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'p
   if (invoice.dgi_qrcode) {
     const qrCodeY = finalY + 30;
     try {
-      // The QR code is in base64 format from DGI
-      const qrCodeImage = invoice.dgi_qrcode.startsWith('data:image')
-        ? invoice.dgi_qrcode
-        : `data:image/png;base64,${invoice.dgi_qrcode}`;
+      // Generate QR code image from the DGI string
+      const qrCodeDataUrl = await QRCode.toDataURL(invoice.dgi_qrcode, {
+        width: 200,
+        margin: 1,
+      });
       
-      doc.addImage(qrCodeImage, 'PNG', 20, qrCodeY, 40, 40);
+      doc.addImage(qrCodeDataUrl, 'PNG', 20, qrCodeY, 40, 40);
       
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
