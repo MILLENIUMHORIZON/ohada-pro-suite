@@ -35,6 +35,8 @@ interface InvoiceData {
   totalTTC: number;
   currency: string;
   notes?: string;
+  dgi_uid?: string;
+  dgi_qrcode?: string;
 }
 
 export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'print' = 'download') {
@@ -183,6 +185,28 @@ export function generateInvoicePDF(invoice: InvoiceData, action: 'download' | 'p
     doc.text('Notes:', 20, finalY + 30);
     const splitNotes = doc.splitTextToSize(invoice.notes, 170);
     doc.text(splitNotes, 20, finalY + 36);
+  }
+
+  // Add QR code if available (normalized by DGI)
+  if (invoice.dgi_qrcode) {
+    const qrCodeY = finalY + 30;
+    try {
+      // The QR code is in base64 format from DGI
+      const qrCodeImage = invoice.dgi_qrcode.startsWith('data:image')
+        ? invoice.dgi_qrcode
+        : `data:image/png;base64,${invoice.dgi_qrcode}`;
+      
+      doc.addImage(qrCodeImage, 'PNG', 20, qrCodeY, 40, 40);
+      
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text('QR Code DGI', 20, qrCodeY + 45);
+      if (invoice.dgi_uid) {
+        doc.text(`UID: ${invoice.dgi_uid}`, 20, qrCodeY + 50);
+      }
+    } catch (error) {
+      console.error('Error adding QR code to PDF:', error);
+    }
   }
 
   // Footer
