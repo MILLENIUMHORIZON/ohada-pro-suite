@@ -76,13 +76,23 @@ export function PartnerForm({ onSuccess, defaultValues, partnerId }: PartnerForm
   const onSubmit = async (values: PartnerFormValues) => {
     setIsLoading(true);
     try {
-      const { data: profile } = await supabase
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Vous devez être connecté pour créer un partenaire");
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("company_id")
         .single();
 
-      if (!profile) {
-        toast.error("Impossible de récupérer les informations utilisateur");
+      if (profileError || !profile?.company_id) {
+        toast.error("Impossible de récupérer les informations de votre entreprise. Veuillez vérifier votre profil.");
+        setIsLoading(false);
         return;
       }
 
