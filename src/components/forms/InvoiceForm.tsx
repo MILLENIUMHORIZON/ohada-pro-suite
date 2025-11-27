@@ -43,10 +43,11 @@ type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
 interface InvoiceFormProps {
   invoice?: any;
+  invoiceTypeCode?: string;
   onSuccess?: () => void;
 }
 
-export function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
+export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: InvoiceFormProps) {
   const [partners, setPartners] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
@@ -164,6 +165,7 @@ export function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
             partner_id: values.partner_id,
             date: values.date,
             due_date: values.due_date,
+            invoice_type_code: invoiceTypeCode,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
@@ -200,6 +202,7 @@ export function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
             due_date: values.due_date,
             status: "draft",
             type: "customer",
+            invoice_type_code: invoiceTypeCode,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
