@@ -36,6 +36,7 @@ const invoiceFormSchema = z.object({
   date: z.string().min(1, "La date est requise"),
   due_date: z.string().min(1, "L'échéance est requise"),
   number: z.string().optional(),
+  invoice_reference_type: z.string().optional(),
   lines: z.array(invoiceLineSchema).min(1, "Au moins une ligne requise"),
 });
 
@@ -60,6 +61,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
       date: new Date().toISOString().split('T')[0],
       due_date: "",
       number: "",
+      invoice_reference_type: "",
       lines: [{ product_id: "", description: "", qty: "1", unit_price: "0", tax_id: "" }],
     },
   });
@@ -71,6 +73,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
         date: invoice.date,
         due_date: invoice.due_date,
         number: invoice.number,
+        invoice_reference_type: invoice.invoice_reference_type || "",
         lines: invoice.lines.map((line: any) => ({
           product_id: line.product_id,
           description: line.description || "",
@@ -166,6 +169,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             date: values.date,
             due_date: values.due_date,
             invoice_type_code: invoiceTypeCode,
+            invoice_reference_type: values.invoice_reference_type || null,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
@@ -203,6 +207,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             status: "draft",
             type: "customer",
             invoice_type_code: invoiceTypeCode,
+            invoice_reference_type: values.invoice_reference_type || null,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
@@ -390,6 +395,33 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             )}
           />
         </div>
+
+        {/* Show reference type selector only for FA and EA invoice types */}
+        {(invoiceTypeCode === 'FA' || invoiceTypeCode === 'EA') && (
+          <FormField
+            control={form.control}
+            name="invoice_reference_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type de Référence *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="COR">COR - Correction</SelectItem>
+                    <SelectItem value="RAN">RAN - Annulation</SelectItem>
+                    <SelectItem value="RAM">RAM - Avoir suite reprise</SelectItem>
+                    <SelectItem value="RRR">RRR - Remise, ristourne, rabais</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}
