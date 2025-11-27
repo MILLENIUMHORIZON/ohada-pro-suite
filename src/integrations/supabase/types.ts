@@ -671,6 +671,7 @@ export type Database = {
           date: string
           due_date: string | null
           id: string
+          invoice_reference_type: string | null
           invoice_type_code: string | null
           notes: string | null
           number: string
@@ -690,6 +691,7 @@ export type Database = {
           date?: string
           due_date?: string | null
           id?: string
+          invoice_reference_type?: string | null
           invoice_type_code?: string | null
           notes?: string | null
           number: string
@@ -709,6 +711,7 @@ export type Database = {
           date?: string
           due_date?: string | null
           id?: string
+          invoice_reference_type?: string | null
           invoice_type_code?: string | null
           notes?: string | null
           number?: string
