@@ -73,15 +73,57 @@ Deno.serve(async (req) => {
     }
 
     const dgiResult = await dgiResponse.json();
-    console.log('DGI CONFIRM response:', dgiResult);
+    console.log('DGI CONFIRM response:', JSON.stringify(dgiResult, null, 2));
+    console.log('Response keys:', Object.keys(dgiResult));
 
-    // Extract QR code from response (assuming it's in a field like qrCode or qrcode)
-    const qrCode = dgiResult.qrCode || dgiResult.qrcode || dgiResult.qr_code;
+    // Try to extract QR code from various possible locations in response
+    let qrCode = null;
+    
+    // Check common field names
+    const possibleFields = [
+      'qrCode', 'qrcode', 'qr_code', 'QRCode', 'QRCODE', 'QR_CODE',
+      'qr', 'QR', 'code', 'Code', 'qrCodeImage', 'qrCodeData',
+      'base64QrCode', 'qrCodeBase64', 'imageBase64', 'image'
+    ];
+    
+    for (const field of possibleFields) {
+      if (dgiResult[field]) {
+        qrCode = dgiResult[field];
+        console.log(`QR code found in field: ${field}`);
+        break;
+      }
+    }
+    
+    // Check nested data object
+    if (!qrCode && dgiResult.data) {
+      console.log('Checking data object:', JSON.stringify(dgiResult.data, null, 2));
+      for (const field of possibleFields) {
+        if (dgiResult.data[field]) {
+          qrCode = dgiResult.data[field];
+          console.log(`QR code found in data.${field}`);
+          break;
+        }
+      }
+    }
+    
+    // Check result object
+    if (!qrCode && dgiResult.result) {
+      console.log('Checking result object:', JSON.stringify(dgiResult.result, null, 2));
+      for (const field of possibleFields) {
+        if (dgiResult.result[field]) {
+          qrCode = dgiResult.result[field];
+          console.log(`QR code found in result.${field}`);
+          break;
+        }
+      }
+    }
 
     if (!qrCode) {
-      console.error('No QR code in response:', dgiResult);
-      throw new Error('Le QR code n\'a pas été retourné par la DGI');
+      console.error('No QR code found in response structure:', JSON.stringify(dgiResult, null, 2));
+      throw new Error('Le QR code n\'a pas été retourné par la DGI. Structure de réponse inattendue.');
     }
+    
+    console.log('QR code extracted successfully (length):', qrCode.length);
 
     // Update invoice with QR code
     const { error: updateError } = await supabaseClient
