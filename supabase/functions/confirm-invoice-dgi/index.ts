@@ -54,16 +54,19 @@ Deno.serve(async (req) => {
     console.log('Confirming invoice with UID:', invoice.dgi_uid);
 
     // Prepare the body for DGI CONFIRM endpoint
-    // Note: "total" should be HT (before tax), DGI will calculate TTC
+    // IMPORTANT: Must match the mode used in initial send (mode: 'ttc')
+    // Round to 2 decimals to avoid precision issues
+    const totalTTC = Math.round((invoice.total_ttc || 0) * 100) / 100;
+    
     const confirmBody = {
-      total: invoice.total_ht || 0,  // Montant HT
+      total: totalTTC,  // Montant TTC (must match initial send mode)
       vtotal: 0.00,
       curCode: invoice.currency || 'CDF',
       curRate: 1
     };
 
     console.log('Sending to DGI CONFIRM:', JSON.stringify(confirmBody, null, 2));
-    console.log('Invoice totals - HT:', invoice.total_ht, 'TTC:', invoice.total_ttc);
+    console.log('Invoice totals - HT:', invoice.total_ht, 'TTC:', invoice.total_ttc, 'Rounded TTC:', totalTTC);
 
     // Call DGI CONFIRM endpoint
     const dgiResponse = await fetch(
