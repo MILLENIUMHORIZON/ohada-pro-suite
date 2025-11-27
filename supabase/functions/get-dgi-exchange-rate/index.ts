@@ -34,15 +34,14 @@ serve(async (req) => {
     let usdToCdfRate = null;
     let effectiveDate = null;
 
-    // The API might return an array or object with currency rates
-    // We need to find the USD to CDF rate
+    // The DGI API returns an array with currency objects
     if (Array.isArray(data)) {
       const usdRate = data.find((item: any) => 
-        item.currencyCode === 'USD' || item.currency === 'USD' || item.code === 'USD'
+        item.type === 'USD'
       );
       if (usdRate) {
-        usdToCdfRate = usdRate.rate || usdRate.exchangeRate || usdRate.value;
-        effectiveDate = usdRate.date || usdRate.effectiveDate || new Date().toISOString();
+        usdToCdfRate = usdRate.rate;
+        effectiveDate = usdRate.date || new Date().toISOString();
       }
     } else if (data.USD) {
       usdToCdfRate = data.USD.rate || data.USD;
