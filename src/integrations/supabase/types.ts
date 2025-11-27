@@ -568,6 +568,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_base: boolean | null
+          last_updated: string | null
           name: string
           rate: number
           symbol: string
@@ -578,6 +579,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_base?: boolean | null
+          last_updated?: string | null
           name: string
           rate?: number
           symbol: string
@@ -588,6 +590,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_base?: boolean | null
+          last_updated?: string | null
           name?: string
           rate?: number
           symbol?: string
