@@ -677,6 +677,7 @@ export type Database = {
           number: string
           order_id: string | null
           partner_id: string
+          payment_method: string | null
           status: Database["public"]["Enums"]["invoice_status"] | null
           total_ht: number | null
           total_tax: number | null
@@ -697,6 +698,7 @@ export type Database = {
           number: string
           order_id?: string | null
           partner_id: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           total_ht?: number | null
           total_tax?: number | null
@@ -717,6 +719,7 @@ export type Database = {
           number?: string
           order_id?: string | null
           partner_id?: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           total_ht?: number | null
           total_tax?: number | null

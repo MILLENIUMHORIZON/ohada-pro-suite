@@ -38,6 +38,7 @@ const invoiceFormSchema = z.object({
   number: z.string().optional(),
   invoice_reference_type: z.string().optional(),
   price_mode: z.enum(["TTC", "HT"]),
+  payment_method: z.enum(["ESPECES", "MOBILEMONEY", "VIREMENT", "CARTEBANCAIRE", "CHEQUES", "CREDIT", "AUTRE"]),
   lines: z.array(invoiceLineSchema).min(1, "Au moins une ligne requise"),
 });
 
@@ -64,6 +65,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
       number: "",
       invoice_reference_type: "",
       price_mode: "TTC",
+      payment_method: "ESPECES",
       lines: [{ product_id: "", description: "", qty: "1", unit_price: "0", tax_id: "" }],
     },
   });
@@ -77,6 +79,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
         number: invoice.number,
         invoice_reference_type: invoice.invoice_reference_type || "",
         price_mode: "TTC",
+        payment_method: invoice.payment_method || "ESPECES",
         lines: invoice.lines.map((line: any) => ({
           product_id: line.product_id,
           description: line.description || "",
@@ -187,6 +190,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             due_date: values.due_date,
             invoice_type_code: invoiceTypeCode,
             invoice_reference_type: values.invoice_reference_type || null,
+            payment_method: values.payment_method,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
@@ -225,6 +229,7 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             type: "customer",
             invoice_type_code: invoiceTypeCode,
             invoice_reference_type: values.invoice_reference_type || null,
+            payment_method: values.payment_method,
             total_ht: totalHT,
             total_tax: totalTax,
             total_ttc: totalTTC,
@@ -461,6 +466,33 @@ export function InvoiceForm({ invoice, invoiceTypeCode = 'FV', onSuccess }: Invo
             )}
           />
         )}
+
+        <FormField
+          control={form.control}
+          name="payment_method"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mode de Paiement *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner le mode" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="ESPECES">ESPECES</SelectItem>
+                  <SelectItem value="MOBILEMONEY">MOBILE MONEY</SelectItem>
+                  <SelectItem value="VIREMENT">VIREMENT</SelectItem>
+                  <SelectItem value="CARTEBANCAIRE">CARTE BANCAIRE</SelectItem>
+                  <SelectItem value="CHEQUES">CHEQUES</SelectItem>
+                  <SelectItem value="CREDIT">CREDIT</SelectItem>
+                  <SelectItem value="AUTRE">AUTRE</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
