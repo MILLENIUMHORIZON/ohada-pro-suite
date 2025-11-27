@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IkEyMTYxNTk5RXxDRDAxMDAyOTIzLTEiLCJyb2xlIjoiVGF4cGF5ZXIiLCJuYmYiOjE3NjQxNDk2NzgsImV4cCI6MTc2NDI4NDQwMCwiaWF0IjoxNzY0MTQ5Njc4LCJpc3MiOiJkZXZlbG9wcGVyLmRnaXJkYy5jZCIsImF1ZCI6ImRldmVsb3BwZXIuZGdpcmRjLmNkIn0.Ttu-lWJKWNlrLXmPQ9im7tbKtpQq3QcsNfcP5gCieB4',
         },
+        body: JSON.stringify({})
       }
     );
 
