@@ -26,6 +26,12 @@ Deno.serve(async (req) => {
       }
     );
 
+    // Service role client for reading company_settings
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
     // Get user from auth
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
@@ -76,6 +82,20 @@ Deno.serve(async (req) => {
     if (!company?.nif || !company?.nim) {
       throw new Error('Les informations fiscales de l\'entreprise (NIF et NIM) doivent être renseignées dans les paramètres avant d\'envoyer une facture à la DGI.');
     }
+
+    // Get DGI API token from company_settings
+    const { data: companySettings, error: settingsError } = await serviceClient
+      .from('company_settings')
+      .select('dgi_api_token')
+      .eq('company_id', profile.company_id)
+      .single();
+
+    if (settingsError || !companySettings?.dgi_api_token) {
+      throw new Error('Token DGI non configuré. Veuillez le configurer dans les paramètres de l\'entreprise.');
+    }
+
+    const dgiApiToken = companySettings.dgi_api_token;
+    console.log('Using DGI token from company_settings');
 
     // Get currency rate
     const { data: currency } = await supabaseClient
@@ -153,12 +173,6 @@ Deno.serve(async (req) => {
     };
 
     console.log('DGI payload:', JSON.stringify(dgiPayload, null, 2));
-
-    // Get DGI API token from secrets
-    const dgiApiToken = Deno.env.get('DGI_API_TOKEN');
-    if (!dgiApiToken) {
-      throw new Error('DGI_API_TOKEN not configured');
-    }
 
     // Send to DGI API
     const dgiResponse = await fetch('https://developper.dgirdc.cd/edef/api/invoice', {

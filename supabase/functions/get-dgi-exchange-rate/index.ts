@@ -1,11 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -13,11 +13,74 @@ serve(async (req) => {
 
   try {
     console.log('Fetching DGI exchange rate...');
+
+    // Get company_id from request if provided
+    let dgiApiToken: string | null = null;
     
+    try {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const userClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          {
+            global: {
+              headers: { Authorization: authHeader },
+            },
+          }
+        );
+
+        const serviceClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        );
+
+        const { data: { user } } = await userClient.auth.getUser();
+        if (user) {
+          const { data: profile } = await userClient
+            .from('profiles')
+            .select('company_id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (profile?.company_id) {
+            const { data: settings } = await serviceClient
+              .from('company_settings')
+              .select('dgi_api_token')
+              .eq('company_id', profile.company_id)
+              .single();
+
+            dgiApiToken = settings?.dgi_api_token || null;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Could not get token from company_settings, using fallback');
+    }
+
+    if (!dgiApiToken) {
+      console.log('No DGI token available, returning fallback rate');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Token DGI non configuré',
+          rate: 2800, // Fallback rate
+          source: 'Fallback',
+          date: new Date().toISOString()
+        }),
+        { 
+          status: 200,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    }
+
     const response = await fetch('https://developper.dgirdc.cd/edef/api/info/currencyRates', {
       method: 'GET',
       headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IkEyMTYxNTk5RXxDRDAxMDAyOTIzLTEiLCJyb2xlIjoiVGF4cGF5ZXIiLCJuYmYiOjE3NjQxNDk2NzgsImV4cCI6MTc2NDI4NDQwMCwiaWF0IjoxNzY0MTQ5Njc4LCJpc3MiOiJkZXZlbG9wcGVyLmRnaXJkYy5jZCIsImF1ZCI6ImRldmVsb3BwZXIuZGdpcmRjLmNkIn0.Ttu-lWJKWNlrLXmPQ9im7tbKtpQq3QcsNfcP5gCieB4',
+        'Authorization': `Bearer ${dgiApiToken}`,
         'Content-Type': 'application/json',
       },
     });
@@ -91,4 +154,4 @@ serve(async (req) => {
       }
     );
   }
-})
+});
