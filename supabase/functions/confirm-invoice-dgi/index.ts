@@ -26,11 +26,42 @@ Deno.serve(async (req) => {
       }
     );
 
+    // Create service client for accessing company_settings
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Get user from auth
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
+
+    // Get user's company_id from profile
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      throw new Error('Profil utilisateur non trouvé');
+    }
+
+    // Get DGI token from company_settings
+    const { data: settings, error: settingsError } = await serviceClient
+      .from('company_settings')
+      .select('dgi_api_token')
+      .eq('company_id', profile.company_id)
+      .single();
+
+    if (settingsError || !settings?.dgi_api_token) {
+      throw new Error('Token DGI non configuré. Veuillez configurer le token dans les paramètres de l\'entreprise.');
+    }
+
+    const dgiToken = settings.dgi_api_token;
+    console.log('Using DGI token from database for company:', profile.company_id);
 
     const { invoiceId } = await req.json() as ConfirmInvoiceData;
 
@@ -68,14 +99,14 @@ Deno.serve(async (req) => {
     console.log('Sending to DGI CONFIRM:', JSON.stringify(confirmBody, null, 2));
     console.log('Invoice totals - HT:', totalHT, 'TTC:', invoice.total_ttc);
 
-    // Call DGI CONFIRM endpoint
+    // Call DGI CONFIRM endpoint with token from database
     const dgiResponse = await fetch(
       `https://developper.dgirdc.cd/edef/api/invoice/${invoice.dgi_uid}/CONFIRM`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IkEyMTYxNTk5RXxDRDAxMDAyOTIzLTEiLCJyb2xlIjoiVGF4cGF5ZXIiLCJuYmYiOjE3NjQxNDk2NzgsImV4cCI6MTc2NDI4NDQwMCwiaWF0IjoxNzY0MTQ5Njc4LCJpc3MiOiJkZXZlbG9wcGVyLmRnaXJkYy5jZCIsImF1ZCI6ImRldmVsb3BwZXIuZGdpcmRjLmNkIn0.Ttu-lWJKWNlrLXmPQ9im7tbKtpQq3QcsNfcP5gCieB4',
+          'Authorization': `Bearer ${dgiToken}`,
         },
         body: JSON.stringify(confirmBody)
       }
