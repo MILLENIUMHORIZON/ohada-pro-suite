@@ -14,6 +14,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Create user client with auth
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
@@ -23,7 +29,7 @@ Deno.serve(async (req) => {
     );
 
     // Get user from auth
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
@@ -52,12 +58,8 @@ Deno.serve(async (req) => {
 
     console.log('Token validated successfully');
 
-    // Store the token - In production, this should be stored securely
-    // For now, we'll update an environment variable or store in a secure table
-    // Since we can't update env vars at runtime, we'll store in a settings table
-    
     // Get user's company_id
-    const { data: profile } = await supabaseClient
+    const { data: profile } = await userClient
       .from('profiles')
       .select('company_id')
       .eq('user_id', user.id)
@@ -67,17 +69,44 @@ Deno.serve(async (req) => {
       throw new Error('Company not found');
     }
 
-    // For now, we'll store the DGI settings in application_liaisons or create a settings mechanism
-    // Since we need to persist this, let's use the existing DGI_API_TOKEN env var
-    // This will require admin action, but we can confirm the token is valid
-    
-    console.log('Token validated and ready to use. Company:', profile.company_id);
+    console.log('Storing token for company:', profile.company_id);
+
+    // Check if company_settings exists for this company
+    const { data: existingSettings } = await supabaseClient
+      .from('company_settings')
+      .select('id')
+      .eq('company_id', profile.company_id)
+      .single();
+
+    if (existingSettings) {
+      // Update existing settings
+      const { error: updateError } = await supabaseClient
+        .from('company_settings')
+        .update({ dgi_api_token: token, updated_at: new Date().toISOString() })
+        .eq('company_id', profile.company_id);
+
+      if (updateError) {
+        console.error('Error updating company_settings:', updateError);
+        throw new Error('Erreur lors de la sauvegarde du token');
+      }
+    } else {
+      // Insert new settings
+      const { error: insertError } = await supabaseClient
+        .from('company_settings')
+        .insert({ company_id: profile.company_id, dgi_api_token: token });
+
+      if (insertError) {
+        console.error('Error inserting company_settings:', insertError);
+        throw new Error('Erreur lors de la sauvegarde du token');
+      }
+    }
+
+    console.log('Token saved successfully for company:', profile.company_id);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Token DGI validé et mis à jour',
-        note: 'Le token a été validé avec succès auprès de la DGI'
+        message: 'Token DGI validé et sauvegardé',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

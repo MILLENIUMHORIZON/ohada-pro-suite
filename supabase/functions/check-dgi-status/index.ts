@@ -22,16 +22,50 @@ Deno.serve(async (req) => {
       }
     );
 
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
     // Get user from auth
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
 
-    // Get DGI API token from secrets
-    const dgiApiToken = Deno.env.get('DGI_API_TOKEN');
+    // Get user's company_id
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile?.company_id) {
+      throw new Error('Company not found');
+    }
+
+    // Get DGI API token from company_settings
+    const { data: companySettings } = await serviceClient
+      .from('company_settings')
+      .select('dgi_api_token')
+      .eq('company_id', profile.company_id)
+      .single();
+
+    const dgiApiToken = companySettings?.dgi_api_token;
+    
     if (!dgiApiToken) {
-      throw new Error('DGI_API_TOKEN not configured');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: 0,
+          message: 'Token DGI non configuré',
+          details: 'Veuillez configurer le token dans les paramètres de l\'entreprise',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     console.log('Testing DGI API status with token...');
