@@ -22,6 +22,7 @@ import Procurement from "./pages/Procurement";
 import ReferenceData from "./pages/ReferenceData";
 import ApplicationManagement from "./pages/ApplicationManagement";
 import ApplicationLiaisons from "./pages/ApplicationLiaisons";
+import FundRequests from "./pages/FundRequests";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -95,6 +96,7 @@ const App = () => {
             <Route path="/reference-data" element={<AppLayout><ReferenceData /></AppLayout>} />
             <Route path="/application-management" element={<AppLayout><ApplicationManagement /></AppLayout>} />
             <Route path="/application-liaisons/:appId" element={<AppLayout><ApplicationLiaisons /></AppLayout>} />
+            <Route path="/fund-requests" element={<AppLayout><FundRequests /></AppLayout>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

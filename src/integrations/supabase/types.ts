@@ -637,6 +637,185 @@ export type Database = {
           },
         ]
       }
+      fund_request_accounting: {
+        Row: {
+          accountant_id: string | null
+          accounting_date: string | null
+          created_at: string
+          expense_account_id: string | null
+          fund_request_id: string
+          id: string
+          notes: string | null
+          third_party_account_id: string | null
+          treasury_account_id: string | null
+        }
+        Insert: {
+          accountant_id?: string | null
+          accounting_date?: string | null
+          created_at?: string
+          expense_account_id?: string | null
+          fund_request_id: string
+          id?: string
+          notes?: string | null
+          third_party_account_id?: string | null
+          treasury_account_id?: string | null
+        }
+        Update: {
+          accountant_id?: string | null
+          accounting_date?: string | null
+          created_at?: string
+          expense_account_id?: string | null
+          fund_request_id?: string
+          id?: string
+          notes?: string | null
+          third_party_account_id?: string | null
+          treasury_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_request_accounting_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_request_accounting_fund_request_id_fkey"
+            columns: ["fund_request_id"]
+            isOneToOne: false
+            referencedRelation: "fund_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_request_accounting_third_party_account_id_fkey"
+            columns: ["third_party_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_request_accounting_treasury_account_id_fkey"
+            columns: ["treasury_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fund_request_history: {
+        Row: {
+          action: string
+          created_at: string
+          from_status: Database["public"]["Enums"]["fund_request_status"] | null
+          fund_request_id: string
+          id: string
+          notes: string | null
+          performed_by: string
+          performed_by_name: string | null
+          step_id: string | null
+          to_status: Database["public"]["Enums"]["fund_request_status"] | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["fund_request_status"]
+            | null
+          fund_request_id: string
+          id?: string
+          notes?: string | null
+          performed_by: string
+          performed_by_name?: string | null
+          step_id?: string | null
+          to_status?: Database["public"]["Enums"]["fund_request_status"] | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["fund_request_status"]
+            | null
+          fund_request_id?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string
+          performed_by_name?: string | null
+          step_id?: string | null
+          to_status?: Database["public"]["Enums"]["fund_request_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_request_history_fund_request_id_fkey"
+            columns: ["fund_request_id"]
+            isOneToOne: false
+            referencedRelation: "fund_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_request_history_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fund_requests: {
+        Row: {
+          amount: number
+          beneficiary: string
+          company_id: string
+          created_at: string
+          currency: string
+          current_step_id: string | null
+          description: string
+          id: string
+          request_date: string
+          request_number: string
+          requester_id: string
+          status: Database["public"]["Enums"]["fund_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          beneficiary: string
+          company_id: string
+          created_at?: string
+          currency?: string
+          current_step_id?: string | null
+          description: string
+          id?: string
+          request_date?: string
+          request_number: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["fund_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          beneficiary?: string
+          company_id?: string
+          created_at?: string
+          currency?: string
+          current_step_id?: string | null
+          description?: string
+          id?: string
+          request_date?: string
+          request_number?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["fund_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           created_at: string | null
@@ -952,6 +1131,66 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_receipts: {
+        Row: {
+          amount: number
+          beneficiary: string
+          cashier_id: string
+          cashier_name: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          description: string
+          fund_request_id: string
+          id: string
+          payment_date: string
+          receipt_number: string
+        }
+        Insert: {
+          amount: number
+          beneficiary: string
+          cashier_id: string
+          cashier_name?: string | null
+          company_id: string
+          created_at?: string
+          currency: string
+          description: string
+          fund_request_id: string
+          id?: string
+          payment_date?: string
+          receipt_number: string
+        }
+        Update: {
+          amount?: number
+          beneficiary?: string
+          cashier_id?: string
+          cashier_name?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          fund_request_id?: string
+          id?: string
+          payment_date?: string
+          receipt_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_fund_request_id_fkey"
+            columns: ["fund_request_id"]
+            isOneToOne: false
+            referencedRelation: "fund_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1989,6 +2228,50 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_steps: {
+        Row: {
+          allowed_actions: string[]
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          required_fields: string[] | null
+          responsible_role: string
+          step_name: string
+          step_order: number
+        }
+        Insert: {
+          allowed_actions?: string[]
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          required_fields?: string[] | null
+          responsible_role: string
+          step_name: string
+          step_order: number
+        }
+        Update: {
+          allowed_actions?: string[]
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          required_fields?: string[] | null
+          responsible_role?: string
+          step_name?: string
+          step_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1997,6 +2280,10 @@ export type Database = {
       activate_account_with_key: {
         Args: { activation_key: string }
         Returns: Json
+      }
+      create_default_workflow_steps: {
+        Args: { p_company_id: string }
+        Returns: undefined
       }
       debug_user_context: {
         Args: never
@@ -2007,6 +2294,14 @@ export type Database = {
         }[]
       }
       generate_company_code: { Args: never; Returns: string }
+      get_next_fund_request_number: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
+      get_next_receipt_number: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       get_next_sequence_number: {
         Args: { p_code: string; p_company_id: string }
         Returns: string
@@ -2040,6 +2335,13 @@ export type Database = {
         | "stock_manager"
       application_type: "loyambo_resto_hotel" | "millenium_payroll" | "other"
       cost_method: "fifo" | "average"
+      fund_request_status:
+        | "draft"
+        | "submitted"
+        | "accounting_review"
+        | "validated"
+        | "rejected"
+        | "paid"
       invoice_status: "draft" | "posted" | "paid" | "cancelled"
       invoice_type: "customer" | "vendor" | "credit_note"
       journal_type: "sales" | "purchases" | "cash" | "bank" | "misc"
@@ -2189,6 +2491,14 @@ export const Constants = {
       ],
       application_type: ["loyambo_resto_hotel", "millenium_payroll", "other"],
       cost_method: ["fifo", "average"],
+      fund_request_status: [
+        "draft",
+        "submitted",
+        "accounting_review",
+        "validated",
+        "rejected",
+        "paid",
+      ],
       invoice_status: ["draft", "posted", "paid", "cancelled"],
       invoice_type: ["customer", "vendor", "credit_note"],
       journal_type: ["sales", "purchases", "cash", "bank", "misc"],

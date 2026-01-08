@@ -11,6 +11,7 @@ import {
   Building2,
   ClipboardList,
   ShoppingCart,
+  Wallet,
 } from "lucide-react";
 import {
   Tooltip,
@@ -25,6 +26,7 @@ const allNavigation = [
   { name: "Pro Forma", href: "/proforma", icon: ClipboardList, shortcut: "⌘P", module: "proforma" },
   { name: "Approvisionnements", href: "/procurement", icon: ShoppingCart, shortcut: "⌘A", module: "procurement" },
   { name: "Facturation", href: "/invoicing", icon: FileText, shortcut: "⌘F", module: "invoicing" },
+  { name: "Demandes de Fonds", href: "/fund-requests", icon: Wallet, shortcut: "⌘R", module: "fund_requests" },
   { name: "Stock", href: "/stock", icon: Package, shortcut: "⌘S", module: "stock" },
   { name: "Comptabilité", href: "/accounting", icon: Calculator, shortcut: "⌘K", module: "accounting" },
   { name: "Paramètres", href: "/settings", icon: Settings, shortcut: "⌘,", module: "settings" },
