@@ -760,6 +760,44 @@ export type Database = {
           },
         ]
       }
+      fund_request_lines: {
+        Row: {
+          created_at: string
+          description: string
+          fund_request_id: string
+          id: string
+          quantity: number
+          subtotal: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          fund_request_id: string
+          id?: string
+          quantity?: number
+          subtotal?: number | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          fund_request_id?: string
+          id?: string
+          quantity?: number
+          subtotal?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_request_lines_fund_request_id_fkey"
+            columns: ["fund_request_id"]
+            isOneToOne: false
+            referencedRelation: "fund_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fund_requests: {
         Row: {
           amount: number
