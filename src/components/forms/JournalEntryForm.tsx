@@ -26,17 +26,17 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const lineSchema = z.object({
-  account_id: z.string().min(1, "Compte requis"),
+  account_id: z.string().min(1, "Veuillez sélectionner un compte"),
   type: z.enum(["debit", "credit"] as const),
-  amount: z.string().min(1, "Montant requis").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Montant invalide"),
+  amount: z.string().min(1, "Le montant est obligatoire").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Le montant doit être supérieur à 0"),
 });
 
 const journalEntryFormSchema = z.object({
-  date: z.string().min(1, "Date requise"),
-  journal_id: z.string().min(1, "Journal requis"),
+  date: z.string().min(1, "La date est obligatoire"),
+  journal_id: z.string().min(1, "Veuillez sélectionner un journal"),
   reference: z.string().optional(),
-  description: z.string().min(1, "Description requise"),
-  lines: z.array(lineSchema).min(2, "Au moins deux lignes requises"),
+  description: z.string().min(1, "La description est obligatoire"),
+  lines: z.array(lineSchema).min(2, "Au moins deux lignes sont requises"),
 }).refine(
   (data) => {
     const totalDebit = data.lines
@@ -126,15 +126,22 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         return;
       }
 
-      // Get user's company_id
+      // Get user's company_id - use eq filter with user_id
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("company_id")
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (profileError || !profile?.company_id) {
+      if (profileError) {
         console.error("Profile error:", profileError);
-        toast.error("Impossible de récupérer les informations de votre entreprise");
+        toast.error("Erreur lors de la récupération du profil");
+        setLoading(false);
+        return;
+      }
+
+      if (!profile?.company_id) {
+        toast.error("Aucune entreprise associée à votre compte. Veuillez contacter l'administrateur.");
         setLoading(false);
         return;
       }
@@ -146,10 +153,10 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      const nextNumber = lastMove
-        ? `JE-${new Date().getFullYear()}-${String(parseInt(lastMove.number.split('-')[2]) + 1).padStart(4, '0')}`
+      const nextNumber = lastMove?.number
+        ? `JE-${new Date().getFullYear()}-${String(parseInt(lastMove.number.split('-')[2] || '0') + 1).padStart(4, '0')}`
         : `JE-${new Date().getFullYear()}-0001`;
 
       // Create account move
