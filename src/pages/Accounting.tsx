@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Download, Upload, Wallet, Building2, CheckCircle, Loader2 } from "lucide-react";
+import { Plus, FileText, Download, Upload, Wallet, Building2, CheckCircle, Loader2, Users, Truck, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -19,6 +19,9 @@ import { GrandLivre } from "@/components/reports/GrandLivre";
 import { BilanOHADA } from "@/components/reports/BilanOHADA";
 import { CompteResultat } from "@/components/reports/CompteResultat";
 import { BalanceAgee } from "@/components/reports/BalanceAgee";
+import { BalanceClients } from "@/components/reports/BalanceClients";
+import { BalanceFournisseurs } from "@/components/reports/BalanceFournisseurs";
+import { JournauxAuxiliaires } from "@/components/reports/JournauxAuxiliaires";
 import { TFT } from "@/components/reports/TFT";
 import { LivreCaisseBanque } from "@/components/reports/LivreCaisseBanque";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,9 +40,11 @@ import { Pencil } from "lucide-react";
 const accountingReports = [
   { name: "Balance à 6 Colonnes", desc: "Soldes initiaux, mouvements et soldes finaux", icon: FileText },
   { name: "Grand Livre", desc: "Détail des écritures par compte", icon: FileText },
+  { name: "Journaux Auxiliaires", desc: "Journal Ventes, Achats, Banque, OD", icon: BookOpen },
   { name: "Livre Caisse & Banque", desc: "Mouvements de trésorerie", icon: Wallet },
-  { name: "Journaux Auxiliaires", desc: "Journal Ventes, Achats, Banque, OD", icon: FileText },
-  { name: "Balance Âgée", desc: "Clients et fournisseurs", icon: FileText },
+  { name: "Balance Clients", desc: "Soldes des comptes clients (411)", icon: Users },
+  { name: "Balance Fournisseurs", desc: "Soldes des comptes fournisseurs (401)", icon: Truck },
+  { name: "Balance Âgée", desc: "Créances et dettes par ancienneté", icon: FileText },
   { name: "Bilan OHADA", desc: "Actif et Passif (système normal)", icon: FileText },
   { name: "Compte de Résultat", desc: "Produits et Charges (OHADA)", icon: FileText },
   { name: "TFT", desc: "Tableau de Flux de Trésorerie (OHADA)", icon: FileText },
@@ -623,12 +628,15 @@ export default function Accounting() {
               </Button>
               {selectedReport === "Balance à 6 Colonnes" && <BalanceGenerale />}
               {selectedReport === "Grand Livre" && <GrandLivre />}
+              {selectedReport === "Journaux Auxiliaires" && <JournauxAuxiliaires />}
               {selectedReport === "Livre Caisse & Banque" && <LivreCaisseBanque />}
+              {selectedReport === "Balance Clients" && <BalanceClients />}
+              {selectedReport === "Balance Fournisseurs" && <BalanceFournisseurs />}
               {selectedReport === "Bilan OHADA" && <BilanOHADA />}
               {selectedReport === "Compte de Résultat" && <CompteResultat />}
               {selectedReport === "Balance Âgée" && <BalanceAgee />}
               {selectedReport === "TFT" && <TFT />}
-              {!["Balance à 6 Colonnes", "Grand Livre", "Livre Caisse & Banque", "Bilan OHADA", "Compte de Résultat", "Balance Âgée", "TFT"].includes(selectedReport) && (
+              {!["Balance à 6 Colonnes", "Grand Livre", "Journaux Auxiliaires", "Livre Caisse & Banque", "Balance Clients", "Balance Fournisseurs", "Bilan OHADA", "Compte de Résultat", "Balance Âgée", "TFT"].includes(selectedReport) && (
                 <Card>
                   <CardContent className="py-12">
                     <div className="text-center text-muted-foreground">
