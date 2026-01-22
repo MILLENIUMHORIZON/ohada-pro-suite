@@ -37,49 +37,84 @@ export function GrandLivre() {
   const loadGrandLivre = async () => {
     setLoading(true);
     try {
-      // Get all accounts with movements
-      const { data: accounts } = await supabase
-        .from("accounts")
-        .select("id, code, name")
-        .order("code");
+      // Get all move lines with their account and move info in a single query
+      const { data: lines, error } = await supabase
+        .from("account_move_lines")
+        .select(`
+          id,
+          debit,
+          credit,
+          account:accounts!inner(id, code, name),
+          move:account_moves!inner(date, number, ref, state, journal:journals(name))
+        `)
+        .eq("move.state", "posted")
+        .order("account.code", { ascending: true });
 
-      if (!accounts) return;
+      if (error) {
+        console.error("Error fetching ledger data:", error);
+        setLoading(false);
+        return;
+      }
 
+      if (!lines || lines.length === 0) {
+        setLedgers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Group lines by account
+      const accountMap = new Map<string, {
+        code: string;
+        name: string;
+        lines: any[];
+      }>();
+
+      lines.forEach((line: any) => {
+        const accountId = line.account?.id;
+        if (!accountId) return;
+
+        if (!accountMap.has(accountId)) {
+          accountMap.set(accountId, {
+            code: line.account.code,
+            name: line.account.name,
+            lines: [],
+          });
+        }
+
+        accountMap.get(accountId)!.lines.push({
+          date: line.move?.date || "",
+          move_number: line.move?.number || "",
+          journal: line.move?.journal?.name || "",
+          ref: line.move?.ref || "",
+          debit: Number(line.debit || 0),
+          credit: Number(line.credit || 0),
+        });
+      });
+
+      // Sort lines by date and compute running balances
       const ledgerData: AccountLedger[] = [];
 
-      for (const account of accounts) {
-        // Get all lines for this account
-        const { data: lines } = await supabase
-          .from("account_move_lines")
-          .select(`
-            debit,
-            credit,
-            move:account_moves(date, number, ref, journal:journals(name))
-          `)
-          .eq("account_id", account.id)
-          .order("move.date");
+      // Sort accounts by code
+      const sortedAccounts = Array.from(accountMap.entries()).sort((a, b) => 
+        a[1].code.localeCompare(b[1].code)
+      );
 
-        if (!lines || lines.length === 0) continue;
+      sortedAccounts.forEach(([_, account]) => {
+        // Sort lines by date
+        account.lines.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         let runningBalance = 0;
-        const ledgerLines: LedgerLine[] = [];
         let totalDebit = 0;
         let totalCredit = 0;
+        const ledgerLines: LedgerLine[] = [];
 
-        lines.forEach((line: any) => {
-          const debit = Number(line.debit || 0);
-          const credit = Number(line.credit || 0);
-          runningBalance += debit - credit;
-          totalDebit += debit;
-          totalCredit += credit;
+        account.lines.forEach((line) => {
+          runningBalance += line.debit - line.credit;
+          totalDebit += line.debit;
+          totalCredit += line.credit;
 
           ledgerLines.push({
-            date: line.move?.date || "",
-            move_number: line.move?.number || "",
-            journal: line.move?.journal?.name || "",
-            ref: line.move?.ref || "",
-            debit,
-            credit,
+            ...line,
             balance: runningBalance,
           });
         });
@@ -92,7 +127,7 @@ export function GrandLivre() {
           total_credit: totalCredit,
           final_balance: runningBalance,
         });
-      }
+      });
 
       setLedgers(ledgerData);
     } catch (error) {
@@ -157,7 +192,7 @@ export function GrandLivre() {
             <CardTitle>Grand Livre</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Détail des écritures par compte</p>
           </div>
-          <Button onClick={downloadCSV} variant="outline">
+          <Button onClick={downloadCSV} variant="outline" disabled={ledgers.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Télécharger CSV
           </Button>
