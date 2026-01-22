@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, Loader2, GripVertical } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Trash2, ArrowUp, ArrowDown, Loader2, GripVertical, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type WorkflowStep = {
   id: string;
@@ -19,6 +21,17 @@ type WorkflowStep = {
   responsible_role: string;
   allowed_actions: string[];
   is_active: boolean;
+};
+
+type UserProfile = {
+  user_id: string;
+  full_name: string;
+  email?: string;
+};
+
+type StepUserAssignment = {
+  step_id: string;
+  user_ids: string[];
 };
 
 const roleLabels: Record<string, string> = {
@@ -47,8 +60,11 @@ interface WorkflowConfigurationProps {
 
 export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurationProps) {
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [stepAssignments, setStepAssignments] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
   const [newStep, setNewStep] = useState({
     step_name: "",
     responsible_role: "",
@@ -58,11 +74,11 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
 
   useEffect(() => {
     if (open) {
-      loadSteps();
+      loadData();
     }
   }, [open]);
 
-  const loadSteps = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,14 +95,39 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
       // Create default steps if none exist
       await supabase.rpc('create_default_workflow_steps', { p_company_id: profile.company_id });
 
-      const { data, error } = await supabase
+      // Load workflow steps
+      const { data: stepsData, error: stepsError } = await supabase
         .from('workflow_steps')
         .select('*')
         .eq('company_id', profile.company_id)
         .order('step_order');
 
-      if (error) throw error;
-      setSteps(data || []);
+      if (stepsError) throw stepsError;
+      setSteps(stepsData || []);
+
+      // Load company users
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('company_id', profile.company_id);
+
+      setUsers(usersData || []);
+
+      // Load step assignments
+      const { data: assignmentsData } = await supabase
+        .from('workflow_step_users')
+        .select('workflow_step_id, user_id')
+        .eq('company_id', profile.company_id);
+
+      const assignments: Record<string, string[]> = {};
+      (assignmentsData || []).forEach(a => {
+        if (!assignments[a.workflow_step_id]) {
+          assignments[a.workflow_step_id] = [];
+        }
+        assignments[a.workflow_step_id].push(a.user_id);
+      });
+      setStepAssignments(assignments);
+
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -134,7 +175,7 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
       if (error) throw error;
 
       setNewStep({ step_name: "", responsible_role: "", allowed_actions: [] });
-      loadSteps();
+      loadData();
       
       toast({
         title: "Succès",
@@ -160,7 +201,7 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
         .eq('id', stepId);
 
       if (error) throw error;
-      loadSteps();
+      loadData();
       
       toast({
         title: "Succès",
@@ -185,7 +226,7 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
         .eq('id', stepId);
 
       if (error) throw error;
-      loadSteps();
+      loadData();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -216,7 +257,7 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
         .update({ step_order: currentStep.step_order })
         .eq('id', swapStep.id);
 
-      loadSteps();
+      loadData();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -226,9 +267,57 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
     }
   };
 
+  const handleToggleUserAssignment = async (stepId: string, userId: string, assigned: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile?.company_id) return;
+
+      if (assigned) {
+        await supabase.from('workflow_step_users').insert({
+          workflow_step_id: stepId,
+          user_id: userId,
+          company_id: profile.company_id,
+        });
+      } else {
+        await supabase
+          .from('workflow_step_users')
+          .delete()
+          .eq('workflow_step_id', stepId)
+          .eq('user_id', userId);
+      }
+
+      // Update local state
+      setStepAssignments(prev => {
+        const current = prev[stepId] || [];
+        if (assigned) {
+          return { ...prev, [stepId]: [...current, userId] };
+        } else {
+          return { ...prev, [stepId]: current.filter(id => id !== userId) };
+        }
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isRequesterRole = (role: string) => role === 'requester';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configuration du Workflow</DialogTitle>
         </DialogHeader>
@@ -256,6 +345,7 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
                         <TableHead className="w-12">Ordre</TableHead>
                         <TableHead>Nom de l'étape</TableHead>
                         <TableHead>Rôle responsable</TableHead>
+                        <TableHead>Utilisateurs assignés</TableHead>
                         <TableHead>Actions autorisées</TableHead>
                         <TableHead className="w-20">Actif</TableHead>
                         <TableHead className="w-32">Actions</TableHead>
@@ -273,9 +363,26 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
                           <TableCell className="font-medium">{step.step_name}</TableCell>
                           <TableCell>{roleLabels[step.responsible_role] || step.responsible_role}</TableCell>
                           <TableCell>
+                            {isRequesterRole(step.responsible_role) ? (
+                              <Badge variant="outline" className="text-xs">
+                                Tous les utilisateurs
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedStep(step)}
+                                className="flex items-center gap-2"
+                              >
+                                <Users className="h-3 w-3" />
+                                {(stepAssignments[step.id] || []).length} utilisateur(s)
+                              </Button>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {step.allowed_actions.map(action => (
-                                <Badge key={action} variant="secondary">
+                                <Badge key={action} variant="secondary" className="text-xs">
                                   {actionLabels[action] || action}
                                 </Badge>
                               ))}
@@ -321,6 +428,47 @@ export function WorkflowConfiguration({ open, onOpenChange }: WorkflowConfigurat
                 )}
               </CardContent>
             </Card>
+
+            {/* User Assignment Dialog */}
+            {selectedStep && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-base">
+                    Assigner des utilisateurs à : {selectedStep.step_name}
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedStep(null)}>
+                    Fermer
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Sélectionnez les utilisateurs qui pourront effectuer les actions de cette étape ({roleLabels[selectedStep.responsible_role]})
+                  </p>
+                  <ScrollArea className="h-[200px] border rounded-md p-4">
+                    <div className="space-y-2">
+                      {users.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">Aucun utilisateur trouvé</p>
+                      ) : (
+                        users.map(user => (
+                          <div key={user.user_id} className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`user-${user.user_id}`}
+                              checked={(stepAssignments[selectedStep.id] || []).includes(user.user_id)}
+                              onCheckedChange={(checked) => 
+                                handleToggleUserAssignment(selectedStep.id, user.user_id, !!checked)
+                              }
+                            />
+                            <Label htmlFor={`user-${user.user_id}`} className="font-normal cursor-pointer">
+                              {user.full_name}
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Add New Step */}
             <Card>

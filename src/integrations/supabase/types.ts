@@ -2266,6 +2266,45 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_step_users: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+          workflow_step_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+          workflow_step_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          workflow_step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_step_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_step_users_workflow_step_id_fkey"
+            columns: ["workflow_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_steps: {
         Row: {
           allowed_actions: string[]
@@ -2319,6 +2358,10 @@ export type Database = {
         Args: { activation_key: string }
         Returns: Json
       }
+      can_perform_workflow_action: {
+        Args: { p_role: string; p_step_id: string; p_user_id: string }
+        Returns: boolean
+      }
       create_default_workflow_steps: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -2332,6 +2375,7 @@ export type Database = {
         }[]
       }
       generate_company_code: { Args: never; Returns: string }
+      get_account_balance: { Args: { p_account_id: string }; Returns: number }
       get_next_fund_request_number: {
         Args: { p_company_id: string }
         Returns: string

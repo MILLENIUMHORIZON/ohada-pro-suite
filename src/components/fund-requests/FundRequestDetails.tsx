@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CheckCircle, XCircle, FileText, Clock, Wallet, Printer, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generatePaymentReceipt } from "@/utils/paymentReceiptGenerator";
+import { WorkflowProgress } from "./WorkflowProgress";
+import { TreasuryAccountSelect } from "./TreasuryAccountSelect";
 
 type FundRequest = {
   id: string;
@@ -50,6 +52,14 @@ type Account = {
   name: string;
 };
 
+type WorkflowStep = {
+  id: string;
+  step_name: string;
+  step_order: number;
+  responsible_role: string;
+  is_active: boolean;
+};
+
 type AccountingData = {
   expense_account_id: string | null;
   treasury_account_id: string | null;
@@ -78,15 +88,18 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [lines, setLines] = useState<FundRequestLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData>({
     expense_account_id: null,
     treasury_account_id: null,
     third_party_account_id: null,
     notes: null,
   });
+  const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [canPerformCurrentAction, setCanPerformCurrentAction] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +109,7 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
       loadAccounts();
       loadAccountingData();
       loadUserRole();
+      loadWorkflowSteps();
     }
   }, [open, request.id]);
 
@@ -111,6 +125,28 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
       .single();
 
     setUserRole(roles?.role || null);
+  };
+
+  const loadWorkflowSteps = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile?.company_id) return;
+
+    const { data } = await supabase
+      .from('workflow_steps')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .eq('is_active', true)
+      .order('step_order');
+
+    setWorkflowSteps(data || []);
   };
 
   const loadHistory = async () => {
@@ -213,6 +249,22 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
   const handleSubmit = () => updateStatus('submitted', 'Soumission');
 
   const handleAccountingComplete = async () => {
+    // Check treasury balance
+    if (accountingData.treasury_account_id) {
+      const { data: balance } = await supabase.rpc('get_account_balance', { 
+        p_account_id: accountingData.treasury_account_id 
+      });
+      
+      if (balance !== null && balance < request.amount) {
+        toast({
+          title: "Erreur",
+          description: `Solde de trésorerie insuffisant. Solde disponible: ${balance}, Montant demandé: ${request.amount}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -350,6 +402,21 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
             <Badge>{statusLabels[request.status]}</Badge>
           </DialogTitle>
         </DialogHeader>
+
+        {/* Workflow Progress */}
+        {workflowSteps.length > 0 && (
+          <Card className="mb-4">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Progression du workflow</CardTitle>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <WorkflowProgress 
+                steps={workflowSteps} 
+                currentStatus={request.status} 
+              />
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="details">
           <TabsList>
@@ -512,25 +579,15 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
                   </Select>
                 </div>
 
-                <div>
-                  <Label>Compte de trésorerie</Label>
-                  <Select
-                    value={accountingData.treasury_account_id || ""}
-                    onValueChange={(value) => setAccountingData(prev => ({ ...prev, treasury_account_id: value }))}
-                    disabled={!canDoAccounting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un compte" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.filter(a => a.code.startsWith('5')).map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.code} - {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Treasury Account with Balance Check */}
+                <TreasuryAccountSelect
+                  accounts={accounts}
+                  value={accountingData.treasury_account_id}
+                  onValueChange={(value) => setAccountingData(prev => ({ ...prev, treasury_account_id: value }))}
+                  requestAmount={request.amount}
+                  currency={request.currency}
+                  disabled={!canDoAccounting}
+                />
 
                 <div>
                   <Label>Compte de tiers</Label>
