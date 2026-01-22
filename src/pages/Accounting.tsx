@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Download, Upload, Wallet, Building2 } from "lucide-react";
+import { Plus, FileText, Download, Upload, Wallet, Building2, CheckCircle, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { BalanceAgee } from "@/components/reports/BalanceAgee";
 import { TFT } from "@/components/reports/TFT";
 import { LivreCaisseBanque } from "@/components/reports/LivreCaisseBanque";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -55,6 +56,7 @@ export default function Accounting() {
   const [journals, setJournals] = useState<any[]>([]);
   const [moves, setMoves] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [validatingMoveId, setValidatingMoveId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState({
     totalAssets: 0,
     totalLiabilities: 0,
@@ -277,6 +279,27 @@ export default function Accounting() {
     loadJournals();
   };
 
+  const handleValidateMove = async (moveId: string) => {
+    setValidatingMoveId(moveId);
+    try {
+      const { error } = await supabase
+        .from("account_moves")
+        .update({ state: "posted" })
+        .eq("id", moveId);
+
+      if (error) throw error;
+
+      toast.success("Écriture validée avec succès");
+      loadMoves();
+      loadMetrics();
+    } catch (error: any) {
+      console.error("Error validating move:", error);
+      toast.error("Erreur lors de la validation de l'écriture");
+    } finally {
+      setValidatingMoveId(null);
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -402,6 +425,7 @@ export default function Accounting() {
                     <TableHead className="text-right">Débit</TableHead>
                     <TableHead className="text-right">Crédit</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,10 +442,29 @@ export default function Accounting() {
                           {entry.state === "posted" ? "Validée" : "Brouillon"}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {entry.state === "draft" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleValidateMove(entry.id)}
+                            disabled={validatingMoveId === entry.id}
+                          >
+                            {validatingMoveId === entry.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Valider
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Aucune écriture comptable enregistrée
                       </TableCell>
                     </TableRow>
