@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Download, Upload } from "lucide-react";
+import { Plus, FileText, Download, Upload, Wallet, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { BilanOHADA } from "@/components/reports/BilanOHADA";
 import { CompteResultat } from "@/components/reports/CompteResultat";
 import { BalanceAgee } from "@/components/reports/BalanceAgee";
 import { TFT } from "@/components/reports/TFT";
+import { LivreCaisseBanque } from "@/components/reports/LivreCaisseBanque";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -35,6 +36,7 @@ import { Pencil } from "lucide-react";
 const accountingReports = [
   { name: "Balance à 6 Colonnes", desc: "Soldes initiaux, mouvements et soldes finaux", icon: FileText },
   { name: "Grand Livre", desc: "Détail des écritures par compte", icon: FileText },
+  { name: "Livre Caisse & Banque", desc: "Mouvements de trésorerie", icon: Wallet },
   { name: "Journaux Auxiliaires", desc: "Journal Ventes, Achats, Banque, OD", icon: FileText },
   { name: "Balance Âgée", desc: "Clients et fournisseurs", icon: FileText },
   { name: "Bilan OHADA", desc: "Actif et Passif (système normal)", icon: FileText },
@@ -163,7 +165,7 @@ export default function Accounting() {
     const accountBalances = new Map<string, number>();
     postedLines.forEach((line: any) => {
       const balance = accountBalances.get(line.account_id) || 0;
-      accountBalances.set(line.account_id, balance + (line.debit || 0) - (line.credit || 0));
+      accountBalances.set(line.account_id, balance + Number(line.debit || 0) - Number(line.credit || 0));
     });
 
     let totalAssets = 0;
@@ -177,34 +179,77 @@ export default function Accounting() {
       const balance = accountBalances.get(account.id) || 0;
       const code = account.code;
 
-      // Actifs (classes 2, 3, 4, 5) - solde débiteur
-      if (code.startsWith('2') || code.startsWith('3') || code.startsWith('4') || code.startsWith('5')) {
+      // OHADA Classification:
+      // Classe 1: Capitaux propres et passifs (solde créditeur = passif)
+      // Classe 2: Immobilisations (solde débiteur = actif)
+      // Classe 3: Stocks (solde débiteur = actif)
+      // Classe 4: Tiers (clients débiteurs = actif, fournisseurs créditeurs = passif)
+      // Classe 5: Trésorerie (solde débiteur = actif)
+      // Classe 6: Charges (solde débiteur)
+      // Classe 7: Produits (solde créditeur)
+
+      // Classe 2 - Immobilisations (actifs)
+      if (code.startsWith('2')) {
+        totalAssets += Math.abs(balance);
+      }
+
+      // Classe 3 - Stocks (actifs)
+      if (code.startsWith('3')) {
+        totalAssets += Math.abs(balance);
+      }
+
+      // Classe 4 - Tiers
+      if (code.startsWith('4')) {
+        // 40x Fournisseurs = passif (solde créditeur)
+        if (code.startsWith('40')) {
+          if (balance < 0) totalLiabilities += Math.abs(balance);
+        }
+        // 41x Clients = actif (solde débiteur)
+        else if (code.startsWith('41')) {
+          if (balance > 0) totalAssets += balance;
+        }
+        // 443x TVA collectée = passif (solde créditeur)
+        else if (code.startsWith('443')) {
+          if (balance < 0) {
+            vatCollected += Math.abs(balance);
+            totalLiabilities += Math.abs(balance);
+          }
+        }
+        // 445x TVA déductible = actif (solde débiteur)
+        else if (code.startsWith('445')) {
+          if (balance > 0) {
+            vatDeductible += balance;
+            totalAssets += balance;
+          }
+        }
+        // Autres comptes de tiers
+        else {
+          if (balance > 0) totalAssets += balance;
+          else if (balance < 0) totalLiabilities += Math.abs(balance);
+        }
+      }
+
+      // Classe 5 - Trésorerie (actifs - Banque 52x, Caisse 57x)
+      if (code.startsWith('5')) {
         if (balance > 0) totalAssets += balance;
+        // Si solde négatif (découvert bancaire) = passif
+        else if (balance < 0) totalLiabilities += Math.abs(balance);
       }
 
-      // Passifs (classe 1) - solde créditeur
+      // Classe 1 - Capitaux propres et passifs
       if (code.startsWith('1')) {
-        if (balance < 0) totalLiabilities += Math.abs(balance);
+        // Les capitaux propres ont normalement un solde créditeur
+        totalLiabilities += Math.abs(balance);
       }
 
-      // Produits (classe 7) - solde créditeur
+      // Classe 7 - Produits (solde créditeur)
       if (code.startsWith('7')) {
-        if (balance < 0) totalIncome += Math.abs(balance);
+        totalIncome += Math.abs(balance);
       }
 
-      // Charges (classe 6) - solde débiteur
+      // Classe 6 - Charges (solde débiteur)
       if (code.startsWith('6')) {
-        if (balance > 0) totalExpense += balance;
-      }
-
-      // TVA collectée (compte 443x)
-      if (code.startsWith('443')) {
-        if (balance < 0) vatCollected += Math.abs(balance);
-      }
-
-      // TVA déductible (compte 445x)
-      if (code.startsWith('445')) {
-        if (balance > 0) vatDeductible += balance;
+        totalExpense += Math.abs(balance);
       }
     });
 
@@ -535,11 +580,12 @@ export default function Accounting() {
               </Button>
               {selectedReport === "Balance à 6 Colonnes" && <BalanceGenerale />}
               {selectedReport === "Grand Livre" && <GrandLivre />}
+              {selectedReport === "Livre Caisse & Banque" && <LivreCaisseBanque />}
               {selectedReport === "Bilan OHADA" && <BilanOHADA />}
               {selectedReport === "Compte de Résultat" && <CompteResultat />}
               {selectedReport === "Balance Âgée" && <BalanceAgee />}
               {selectedReport === "TFT" && <TFT />}
-              {!["Balance à 6 Colonnes", "Grand Livre", "Bilan OHADA", "Compte de Résultat", "Balance Âgée", "TFT"].includes(selectedReport) && (
+              {!["Balance à 6 Colonnes", "Grand Livre", "Livre Caisse & Banque", "Bilan OHADA", "Compte de Résultat", "Balance Âgée", "TFT"].includes(selectedReport) && (
                 <Card>
                   <CardContent className="py-12">
                     <div className="text-center text-muted-foreground">
