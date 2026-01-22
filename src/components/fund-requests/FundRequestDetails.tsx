@@ -26,6 +26,14 @@ type FundRequest = {
   requester_id: string;
 };
 
+type FundRequestLine = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+};
+
 type HistoryEntry = {
   id: string;
   action: string;
@@ -68,6 +76,7 @@ const statusLabels: Record<string, string> = {
 export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: FundRequestDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [lines, setLines] = useState<FundRequestLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData>({
     expense_account_id: null,
@@ -83,6 +92,7 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
   useEffect(() => {
     if (open) {
       loadHistory();
+      loadLines();
       loadAccounts();
       loadAccountingData();
       loadUserRole();
@@ -111,6 +121,16 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
       .order('created_at', { ascending: false });
 
     setHistory(data || []);
+  };
+
+  const loadLines = async () => {
+    const { data } = await supabase
+      .from('fund_request_lines')
+      .select('*')
+      .eq('fund_request_id', request.id)
+      .order('created_at', { ascending: true });
+
+    setLines(data || []);
   };
 
   const loadAccounts = async () => {
@@ -334,6 +354,7 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
         <Tabs defaultValue="details">
           <TabsList>
             <TabsTrigger value="details">Détails</TabsTrigger>
+            <TabsTrigger value="articles">Articles ({lines.length})</TabsTrigger>
             <TabsTrigger value="accounting">Comptabilité</TabsTrigger>
             <TabsTrigger value="history">Historique</TabsTrigger>
           </TabsList>
@@ -347,7 +368,7 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
                     <p className="font-medium">{request.beneficiary}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Montant</Label>
+                    <Label className="text-muted-foreground">Montant Total</Label>
                     <p className="font-medium text-lg">{formatAmount(request.amount, request.currency)}</p>
                   </div>
                   <div>
@@ -415,6 +436,54 @@ export function FundRequestDetails({ request, open, onOpenChange, onUpdate }: Fu
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="articles" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Articles de la demande</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {lines.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Aucun article (demande sans détail)</p>
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50%]">Description</TableHead>
+                          <TableHead className="text-right">Quantité</TableHead>
+                          <TableHead className="text-right">Prix unitaire</TableHead>
+                          <TableHead className="text-right">Sous-total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lines.map((line) => (
+                          <TableRow key={line.id}>
+                            <TableCell>{line.description}</TableCell>
+                            <TableCell className="text-right">{line.quantity}</TableCell>
+                            <TableCell className="text-right">
+                              {formatAmount(line.unit_price, request.currency)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatAmount(line.subtotal, request.currency)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="flex justify-end mt-4">
+                      <div className="bg-muted rounded-lg px-6 py-3 text-right">
+                        <span className="text-muted-foreground mr-4">Total:</span>
+                        <span className="text-xl font-bold">
+                          {formatAmount(request.amount, request.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="accounting" className="space-y-4">
