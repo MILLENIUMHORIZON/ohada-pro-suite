@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertTriangle, TrendingUp, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 const lineSchema = z.object({
   account_id: z.string().min(1, "Veuillez sélectionner un compte"),
@@ -34,6 +36,8 @@ const lineSchema = z.object({
 const journalEntryFormSchema = z.object({
   date: z.string().min(1, "La date est obligatoire"),
   journal_id: z.string().min(1, "Veuillez sélectionner un journal"),
+  currency: z.string().min(1, "Veuillez sélectionner une devise"),
+  exchange_rate: z.string().min(1, "Le taux de change est requis"),
   reference: z.string().optional(),
   description: z.string().min(1, "La description est obligatoire"),
   lines: z.array(lineSchema).min(2, "Au moins deux lignes sont requises"),
@@ -62,7 +66,11 @@ interface JournalEntryFormProps {
 export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
   const [journals, setJournals] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingRate, setLoadingRate] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState<string | null>(null);
 
   useEffect(() => {
     loadJournalsAndAccounts();
@@ -70,13 +78,24 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
 
   const loadJournalsAndAccounts = async () => {
     try {
-      const [journalsRes, accountsRes] = await Promise.all([
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .single();
+
+      if (profile?.company_id) {
+        setCompanyId(profile.company_id);
+      }
+
+      const [journalsRes, accountsRes, currenciesRes] = await Promise.all([
         supabase.from("journals").select("*").order("name"),
-        supabase.from("accounts").select("*").order("code"),
+        supabase.from("accounts").select("id, code, name, currency, type").order("code"),
+        supabase.from("currencies").select("*").order("code"),
       ]);
 
       if (journalsRes.data) setJournals(journalsRes.data);
       if (accountsRes.data) setAccounts(accountsRes.data);
+      if (currenciesRes.data) setCurrencies(currenciesRes.data);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Erreur lors du chargement des données");
@@ -88,6 +107,8 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
       journal_id: "",
+      currency: "CDF",
+      exchange_rate: "1",
       reference: "",
       description: "",
       lines: [
@@ -97,12 +118,75 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
     },
   });
 
+  const watchCurrency = form.watch("currency");
+  const watchLines = form.watch("lines");
+
+  // Check currency mismatch on line selection
+  useEffect(() => {
+    const selectedCurrency = watchCurrency;
+    if (!selectedCurrency) return;
+
+    let mismatch = "";
+    for (const line of watchLines) {
+      if (line.account_id) {
+        const account = accounts.find(a => a.id === line.account_id);
+        // Treasury accounts (5x) must match currency
+        if (account && account.code.match(/^5[1237]/) && account.currency && account.currency !== selectedCurrency) {
+          mismatch = `Le compte ${account.code} (${account.name}) est en ${account.currency}. L'écriture est en ${selectedCurrency}. Veuillez changer la devise ou le compte.`;
+          break;
+        }
+      }
+    }
+    setCurrencyMismatchWarning(mismatch);
+  }, [watchCurrency, watchLines, accounts]);
+
+  const fetchExchangeRate = async () => {
+    if (!companyId || watchCurrency === "CDF") return;
+    
+    setLoadingRate(true);
+    try {
+      const { data, error } = await supabase.rpc('get_latest_exchange_rate', {
+        p_company_id: companyId,
+        p_from_currency: watchCurrency,
+        p_to_currency: 'CDF',
+      });
+
+      if (!error && data && data !== 1) {
+        form.setValue("exchange_rate", data.toString());
+        toast.success(`Taux ${watchCurrency}/CDF: ${data}`);
+      } else {
+        // Fallback to currencies table
+        const { data: currencyData } = await supabase
+          .from("currencies")
+          .select("rate")
+          .eq("company_id", companyId)
+          .eq("code", watchCurrency)
+          .single();
+
+        if (currencyData?.rate) {
+          form.setValue("exchange_rate", currencyData.rate.toString());
+          toast.success(`Taux ${watchCurrency}/CDF: ${currencyData.rate}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching rate:", error);
+    } finally {
+      setLoadingRate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (watchCurrency && watchCurrency !== "CDF") {
+      fetchExchangeRate();
+    } else if (watchCurrency === "CDF") {
+      form.setValue("exchange_rate", "1");
+    }
+  }, [watchCurrency, companyId]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "lines",
   });
-
-  const watchLines = form.watch("lines");
 
   const totalDebit = watchLines
     .filter(line => line.type === "debit")
@@ -115,6 +199,12 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
   const difference = totalDebit - totalCredit;
 
   const onSubmit = async (data: JournalEntryFormValues) => {
+    // Check currency mismatch before submission
+    if (currencyMismatchWarning) {
+      toast.error("Impossible de créer l'écriture : incohérence de devise");
+      return;
+    }
+
     setLoading(true);
     try {
       // Check if user is authenticated
@@ -146,6 +236,8 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         return;
       }
 
+      const exchangeRate = Number(data.exchange_rate) || 1;
+
       // Generate entry number
       const { data: lastMove } = await supabase
         .from("account_moves")
@@ -159,7 +251,7 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         ? `JE-${new Date().getFullYear()}-${String(parseInt(lastMove.number.split('-')[2] || '0') + 1).padStart(4, '0')}`
         : `JE-${new Date().getFullYear()}-0001`;
 
-      // Create account move
+      // Create account move with currency info
       const { data: move, error: moveError } = await supabase
         .from("account_moves")
         .insert({
@@ -169,19 +261,22 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
           ref: data.reference || null,
           company_id: profile.company_id,
           state: "draft",
+          currency: data.currency,
+          exchange_rate: exchangeRate,
         })
         .select()
         .single();
 
       if (moveError) throw moveError;
 
-      // Create all lines (debit and credit)
+      // Create all lines (debit and credit) with currency info
       const allLines = data.lines.map(line => ({
         move_id: move.id,
         account_id: line.account_id,
         debit: line.type === "debit" ? Number(line.amount) : 0,
         credit: line.type === "credit" ? Number(line.amount) : 0,
-        currency: "CDF",
+        currency: data.currency,
+        exchange_rate: exchangeRate,
       }));
 
       const { error: linesError } = await supabase
@@ -189,6 +284,21 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
         .insert(allLines);
 
       if (linesError) throw linesError;
+
+      // Save exchange rate to exchange_rates table for future reference
+      if (data.currency !== "CDF" && exchangeRate !== 1) {
+        await supabase.from("exchange_rates").upsert({
+          company_id: profile.company_id,
+          from_currency: data.currency,
+          to_currency: "CDF",
+          rate: exchangeRate,
+          effective_date: data.date,
+          source: "manual",
+          created_by: user.id,
+        }, {
+          onConflict: "company_id,from_currency,to_currency,effective_date",
+        });
+      }
 
       toast.success("Écriture comptable créée avec succès");
       form.reset();
@@ -246,19 +356,88 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="reference"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Référence (Optionnel)</FormLabel>
-              <FormControl>
-                <Input placeholder="FAC-2025-0001" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        {/* Currency and Exchange Rate Row */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1">
+                  Devise de l'écriture
+                  <Badge variant="outline" className="ml-2">{watchCurrency}</Badge>
+                </FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner une devise" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.id} value={currency.code}>
+                        {currency.code} - {currency.name} ({currency.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {watchCurrency && watchCurrency !== "CDF" && (
+            <FormField
+              control={form.control}
+              name="exchange_rate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Taux {watchCurrency}/CDF
+                  </FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={fetchExchangeRate}
+                      disabled={loadingRate}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${loadingRate ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
-        />
+
+          <FormField
+            control={form.control}
+            name="reference"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Référence (Optionnel)</FormLabel>
+                <FormControl>
+                  <Input placeholder="FAC-2025-0001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Currency Mismatch Warning */}
+        {currencyMismatchWarning && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{currencyMismatchWarning}</AlertDescription>
+          </Alert>
+        )}
 
         <FormField
           control={form.control}
@@ -389,19 +568,19 @@ export function JournalEntryForm({ onSuccess }: JournalEntryFormProps) {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Débit:</span>
                 <span className="font-mono font-semibold">
-                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalDebit)} CDF
+                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalDebit)} {watchCurrency}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Crédit:</span>
                 <span className="font-mono font-semibold">
-                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalCredit)} CDF
+                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalCredit)} {watchCurrency}
                 </span>
               </div>
               <div className={`flex justify-between font-bold pt-2 border-t ${difference !== 0 ? 'text-destructive' : 'text-primary'}`}>
                 <span>Différence:</span>
                 <span className="font-mono">
-                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(Math.abs(difference))} CDF
+                  {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(Math.abs(difference))} {watchCurrency}
                 </span>
               </div>
               {difference !== 0 && (

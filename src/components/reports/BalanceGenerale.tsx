@@ -7,6 +7,7 @@ import { Download, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CurrencyFilter } from "./CurrencyFilter";
 
 interface BalanceItem {
   code: string;
@@ -31,20 +32,30 @@ export function BalanceGenerale() {
     solde_final_debit: 0, 
     solde_final_credit: 0 
   });
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currencyFilter, setCurrencyFilter] = useState("all");
 
   useEffect(() => {
     loadBalance();
-  }, []);
+  }, [currencyFilter]);
 
   const loadBalance = async () => {
     setLoading(true);
     try {
-      // Get all accounts
+      // Get user's company_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .single();
+
+      if (!profile?.company_id) return;
+
+      // Get all accounts for this company
       const { data: accounts } = await supabase
         .from("accounts")
         .select("id, code, name, type")
+        .eq("company_id", profile.company_id)
         .order("code");
 
       if (!accounts) return;
@@ -52,18 +63,34 @@ export function BalanceGenerale() {
       // Get company's fiscal year start (assuming January 1st of current year)
       const fiscalYearStart = startDate || `${new Date().getFullYear()}-01-01`;
 
-      // Get initial balance (before start date)
-      const { data: initialLines } = await supabase
+      // Build query for initial lines (before start date)
+      let initialQuery = supabase
         .from("account_move_lines")
-        .select("account_id, debit, credit, account_moves!inner(date)")
+        .select("account_id, debit, credit, currency, account_moves!inner(date, state, company_id)")
+        .eq("account_moves.company_id", profile.company_id)
+        .eq("account_moves.state", "posted")
         .lt("account_moves.date", fiscalYearStart);
 
-      // Get period movements (between start and end date)
-      const { data: periodLines } = await supabase
+      if (currencyFilter && currencyFilter !== "all") {
+        initialQuery = initialQuery.eq("currency", currencyFilter);
+      }
+
+      const { data: initialLines } = await initialQuery;
+
+      // Build query for period movements (between start and end date)
+      let periodQuery = supabase
         .from("account_move_lines")
-        .select("account_id, debit, credit, account_moves!inner(date)")
+        .select("account_id, debit, credit, currency, account_moves!inner(date, state, company_id)")
+        .eq("account_moves.company_id", profile.company_id)
+        .eq("account_moves.state", "posted")
         .gte("account_moves.date", fiscalYearStart)
         .lte("account_moves.date", endDate);
+
+      if (currencyFilter && currencyFilter !== "all") {
+        periodQuery = periodQuery.eq("currency", currencyFilter);
+      }
+
+      const { data: periodLines } = await periodQuery;
 
       const balanceMap = new Map<string, BalanceItem>();
 
@@ -219,27 +246,34 @@ export function BalanceGenerale() {
             Télécharger CSV
           </Button>
         </div>
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="flex flex-wrap items-end gap-4 mt-4">
           <div>
-            <Label htmlFor="startDate">Date de début</Label>
+            <Label htmlFor="startDate">Du</Label>
             <Input
               id="startDate"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
             />
           </div>
           <div>
-            <Label htmlFor="endDate">Date de fin</Label>
+            <Label htmlFor="endDate">Au</Label>
             <Input
               id="endDate"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
             />
           </div>
+          <CurrencyFilter 
+            value={currencyFilter} 
+            onChange={setCurrencyFilter}
+            showAll={true}
+          />
+          <Button onClick={loadBalance}>Actualiser</Button>
         </div>
-        <Button onClick={loadBalance} className="mt-4">Actualiser</Button>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border overflow-x-auto">

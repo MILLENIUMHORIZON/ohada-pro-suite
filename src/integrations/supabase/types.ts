@@ -22,6 +22,7 @@ export type Database = {
           credit: number | null
           currency: string | null
           debit: number | null
+          exchange_rate: number | null
           id: string
           maturity_date: string | null
           move_id: string | null
@@ -36,6 +37,7 @@ export type Database = {
           credit?: number | null
           currency?: string | null
           debit?: number | null
+          exchange_rate?: number | null
           id?: string
           maturity_date?: string | null
           move_id?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           credit?: number | null
           currency?: string | null
           debit?: number | null
+          exchange_rate?: number | null
           id?: string
           maturity_date?: string | null
           move_id?: string | null
@@ -92,7 +95,9 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string | null
+          currency: string | null
           date: string
+          exchange_rate: number | null
           id: string
           journal_id: string
           number: string
@@ -104,7 +109,9 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string | null
+          currency?: string | null
           date?: string
+          exchange_rate?: number | null
           id?: string
           journal_id: string
           number: string
@@ -116,7 +123,9 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string | null
+          currency?: string | null
           date?: string
+          exchange_rate?: number | null
           id?: string
           journal_id?: string
           number?: string
@@ -154,6 +163,7 @@ export type Database = {
           code: string
           company_id: string
           created_at: string | null
+          currency: string | null
           id: string
           name: string
           parent_id: string | null
@@ -164,6 +174,7 @@ export type Database = {
           code: string
           company_id: string
           created_at?: string | null
+          currency?: string | null
           id?: string
           name: string
           parent_id?: string | null
@@ -174,6 +185,7 @@ export type Database = {
           code?: string
           company_id?: string
           created_at?: string | null
+          currency?: string | null
           id?: string
           name?: string
           parent_id?: string | null
@@ -630,6 +642,133 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "currencies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      currency_conversions: {
+        Row: {
+          account_move_id: string | null
+          company_id: string
+          conversion_date: string
+          created_at: string | null
+          created_by: string | null
+          exchange_gain_loss: number | null
+          exchange_rate: number
+          from_account_id: string
+          from_amount: number
+          from_currency: string
+          id: string
+          notes: string | null
+          to_account_id: string
+          to_amount: number
+          to_currency: string
+        }
+        Insert: {
+          account_move_id?: string | null
+          company_id: string
+          conversion_date?: string
+          created_at?: string | null
+          created_by?: string | null
+          exchange_gain_loss?: number | null
+          exchange_rate: number
+          from_account_id: string
+          from_amount: number
+          from_currency: string
+          id?: string
+          notes?: string | null
+          to_account_id: string
+          to_amount: number
+          to_currency: string
+        }
+        Update: {
+          account_move_id?: string | null
+          company_id?: string
+          conversion_date?: string
+          created_at?: string | null
+          created_by?: string | null
+          exchange_gain_loss?: number | null
+          exchange_rate?: number
+          from_account_id?: string
+          from_amount?: number
+          from_currency?: string
+          id?: string
+          notes?: string | null
+          to_account_id?: string
+          to_amount?: number
+          to_currency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currency_conversions_account_move_id_fkey"
+            columns: ["account_move_id"]
+            isOneToOne: false
+            referencedRelation: "account_moves"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_conversions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_conversions_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_conversions_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exchange_rates: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          effective_date: string
+          from_currency: string
+          id: string
+          rate: number
+          source: string | null
+          to_currency: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          from_currency: string
+          id?: string
+          rate: number
+          source?: string | null
+          to_currency: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          from_currency?: string
+          id?: string
+          rate?: number
+          source?: string | null
+          to_currency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_rates_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2266,6 +2405,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_treasury_accounts: {
+        Row: {
+          account_id: string
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_treasury_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_treasury_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_step_users: {
         Row: {
           company_id: string
@@ -2358,6 +2539,10 @@ export type Database = {
         Args: { activation_key: string }
         Returns: Json
       }
+      can_access_treasury_account: {
+        Args: { p_account_id: string; p_user_id: string }
+        Returns: boolean
+      }
       can_perform_workflow_action: {
         Args: { p_role: string; p_step_id: string; p_user_id: string }
         Returns: boolean
@@ -2376,6 +2561,18 @@ export type Database = {
       }
       generate_company_code: { Args: never; Returns: string }
       get_account_balance: { Args: { p_account_id: string }; Returns: number }
+      get_account_balance_by_currency: {
+        Args: { p_account_id: string; p_currency?: string }
+        Returns: number
+      }
+      get_latest_exchange_rate: {
+        Args: {
+          p_company_id: string
+          p_from_currency: string
+          p_to_currency: string
+        }
+        Returns: number
+      }
       get_next_fund_request_number: {
         Args: { p_company_id: string }
         Returns: string

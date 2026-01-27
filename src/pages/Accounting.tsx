@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Download, Upload, Wallet, Building2, CheckCircle, Loader2, Users, Truck, BookOpen } from "lucide-react";
+import { Plus, FileText, Download, Upload, Wallet, Building2, CheckCircle, Loader2, Users, Truck, BookOpen, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -24,6 +24,7 @@ import { BalanceFournisseurs } from "@/components/reports/BalanceFournisseurs";
 import { JournauxAuxiliaires } from "@/components/reports/JournauxAuxiliaires";
 import { TFT } from "@/components/reports/TFT";
 import { LivreCaisseBanque } from "@/components/reports/LivreCaisseBanque";
+import { CurrencyConversion } from "@/components/accounting/CurrencyConversion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -406,8 +407,12 @@ export default function Accounting() {
       </div>
 
       <Tabs defaultValue="entries" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="entries">Écritures Comptables</TabsTrigger>
+          <TabsTrigger value="conversion" className="flex items-center gap-1">
+            <RefreshCw className="h-4 w-4" />
+            Conversion
+          </TabsTrigger>
           <TabsTrigger value="journals">Journaux</TabsTrigger>
           <TabsTrigger value="accounts">Plan Comptable</TabsTrigger>
           <TabsTrigger value="reports">Rapports</TabsTrigger>
@@ -478,6 +483,14 @@ export default function Accounting() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Currency Conversion Tab */}
+        <TabsContent value="conversion" className="space-y-4">
+          <CurrencyConversion onSuccess={() => {
+            loadMoves();
+            loadMetrics();
+          }} />
         </TabsContent>
 
         <TabsContent value="journals" className="space-y-4">
