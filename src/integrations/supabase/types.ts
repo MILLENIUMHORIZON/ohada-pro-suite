@@ -1596,9 +1596,12 @@ export type Database = {
           currency: string | null
           description: string | null
           id: string
+          main_supplier_id: string | null
           name: string
           product_type_code: string | null
           sku: string
+          stock_min: number
+          storage_location_id: string | null
           tax_id: string | null
           type: Database["public"]["Enums"]["product_type"]
           unit_price: number | null
@@ -1615,9 +1618,12 @@ export type Database = {
           currency?: string | null
           description?: string | null
           id?: string
+          main_supplier_id?: string | null
           name: string
           product_type_code?: string | null
           sku: string
+          stock_min?: number
+          storage_location_id?: string | null
           tax_id?: string | null
           type?: Database["public"]["Enums"]["product_type"]
           unit_price?: number | null
@@ -1634,9 +1640,12 @@ export type Database = {
           currency?: string | null
           description?: string | null
           id?: string
+          main_supplier_id?: string | null
           name?: string
           product_type_code?: string | null
           sku?: string
+          stock_min?: number
+          storage_location_id?: string | null
           tax_id?: string | null
           type?: Database["public"]["Enums"]["product_type"]
           unit_price?: number | null
@@ -1656,6 +1665,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_main_supplier_id_fkey"
+            columns: ["main_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_storage_location_id_fkey"
+            columns: ["storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
             referencedColumns: ["id"]
           },
           {
@@ -2159,10 +2182,13 @@ export type Database = {
           date: string
           from_location_id: string
           id: string
+          move_type: Database["public"]["Enums"]["stock_move_type"] | null
+          notes: string | null
           origin: string | null
           product_id: string
           qty: number
           reference: string | null
+          responsible_id: string | null
           state: Database["public"]["Enums"]["stock_move_status"] | null
           to_location_id: string
           uom_id: string | null
@@ -2175,10 +2201,13 @@ export type Database = {
           date?: string
           from_location_id: string
           id?: string
+          move_type?: Database["public"]["Enums"]["stock_move_type"] | null
+          notes?: string | null
           origin?: string | null
           product_id: string
           qty?: number
           reference?: string | null
+          responsible_id?: string | null
           state?: Database["public"]["Enums"]["stock_move_status"] | null
           to_location_id: string
           uom_id?: string | null
@@ -2191,10 +2220,13 @@ export type Database = {
           date?: string
           from_location_id?: string
           id?: string
+          move_type?: Database["public"]["Enums"]["stock_move_type"] | null
+          notes?: string | null
           origin?: string | null
           product_id?: string
           qty?: number
           reference?: string | null
+          responsible_id?: string | null
           state?: Database["public"]["Enums"]["stock_move_status"] | null
           to_location_id?: string
           uom_id?: string | null
@@ -2242,28 +2274,37 @@ export type Database = {
         Row: {
           company_id: string
           cost: number | null
+          created_at: string | null
+          currency: string | null
           id: string
           location_id: string
           product_id: string
           qty_on_hand: number | null
+          reserved_qty: number
           updated_at: string | null
         }
         Insert: {
           company_id: string
           cost?: number | null
+          created_at?: string | null
+          currency?: string | null
           id?: string
           location_id: string
           product_id: string
           qty_on_hand?: number | null
+          reserved_qty?: number
           updated_at?: string | null
         }
         Update: {
           company_id?: string
           cost?: number | null
+          created_at?: string | null
+          currency?: string | null
           id?: string
           location_id?: string
           product_id?: string
           qty_on_hand?: number | null
+          reserved_qty?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -2286,6 +2327,65 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_valuation_accounts: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          expense_account_id: string | null
+          id: string
+          product_type: Database["public"]["Enums"]["product_type"]
+          stock_account_id: string | null
+          variation_account_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          expense_account_id?: string | null
+          id?: string
+          product_type: Database["public"]["Enums"]["product_type"]
+          stock_account_id?: string | null
+          variation_account_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          expense_account_id?: string | null
+          id?: string
+          product_type?: Database["public"]["Enums"]["product_type"]
+          stock_account_id?: string | null
+          variation_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_valuation_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_valuation_accounts_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_valuation_accounts_stock_account_id_fkey"
+            columns: ["stock_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_valuation_accounts_variation_account_id_fkey"
+            columns: ["variation_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -2585,6 +2685,14 @@ export type Database = {
         Args: { p_code: string; p_company_id: string }
         Returns: string
       }
+      get_product_available_stock: {
+        Args: { p_company_id: string; p_product_id: string }
+        Returns: number
+      }
+      get_product_stock: {
+        Args: { p_company_id: string; p_product_id: string }
+        Returns: number
+      }
       get_user_company_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -2629,9 +2737,26 @@ export type Database = {
       move_status: "draft" | "posted"
       partner_type: "PP" | "PM" | "PC" | "PL" | "AO"
       payment_status: "draft" | "posted" | "cancelled"
-      product_type: "stock" | "service" | "tax"
+      product_type:
+        | "stock"
+        | "service"
+        | "tax"
+        | "raw_material"
+        | "semi_finished"
+        | "finished"
+        | "consumable"
+        | "spare_part"
       sale_status: "draft" | "confirmed" | "done" | "cancelled"
       stock_move_status: "draft" | "confirmed" | "done" | "cancelled"
+      stock_move_type:
+        | "supplier_in"
+        | "production_out"
+        | "production_in"
+        | "transfer"
+        | "adjustment"
+        | "production_return"
+        | "scrap"
+        | "customer_out"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2786,9 +2911,28 @@ export const Constants = {
       move_status: ["draft", "posted"],
       partner_type: ["PP", "PM", "PC", "PL", "AO"],
       payment_status: ["draft", "posted", "cancelled"],
-      product_type: ["stock", "service", "tax"],
+      product_type: [
+        "stock",
+        "service",
+        "tax",
+        "raw_material",
+        "semi_finished",
+        "finished",
+        "consumable",
+        "spare_part",
+      ],
       sale_status: ["draft", "confirmed", "done", "cancelled"],
       stock_move_status: ["draft", "confirmed", "done", "cancelled"],
+      stock_move_type: [
+        "supplier_in",
+        "production_out",
+        "production_in",
+        "transfer",
+        "adjustment",
+        "production_return",
+        "scrap",
+        "customer_out",
+      ],
     },
   },
 } as const

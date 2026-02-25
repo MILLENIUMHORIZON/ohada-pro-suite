@@ -29,11 +29,12 @@ const productFormSchema = z.object({
   sku: z.string().min(1, "La référence est requise"),
   category_id: z.string().optional(),
   uom_id: z.string().optional(),
-  type: z.enum(["stock", "service", "tax"]),
+  type: z.enum(["stock", "service", "tax", "raw_material", "semi_finished", "finished", "consumable", "spare_part"]),
   product_type_code: z.string().optional(),
   currency: z.string().min(1, "La devise est requise"),
   unit_price: z.string().min(1, "Le prix de vente est requis"),
   cost_price: z.string().optional(),
+  stock_min: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -63,6 +64,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
       currency: "CDF",
       unit_price: "0",
       cost_price: "0",
+      stock_min: "0",
       description: "",
       ...defaultValues,
     },
@@ -160,6 +162,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         currency: values.currency,
         unit_price: parseFloat(values.unit_price),
         cost_price: parseFloat(values.cost_price || "0"),
+        stock_min: parseFloat(values.stock_min || "0"),
         description: values.description || null,
         company_id: profile.company_id,
       }]);
@@ -238,12 +241,22 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
                     {companyCountry === "CD" ? (
                       <>
                         <SelectItem value="stock">BIE - Bien (produit physique)</SelectItem>
+                        <SelectItem value="raw_material">Matière première</SelectItem>
+                        <SelectItem value="semi_finished">Produit semi-fini</SelectItem>
+                        <SelectItem value="finished">Produit fini</SelectItem>
+                        <SelectItem value="consumable">Consommable</SelectItem>
+                        <SelectItem value="spare_part">Pièce détachée</SelectItem>
                         <SelectItem value="service">SER - Service</SelectItem>
                         <SelectItem value="tax">TAX - Taxe / Redevance</SelectItem>
                       </>
                     ) : (
                       <>
                         <SelectItem value="stock">Stockable</SelectItem>
+                        <SelectItem value="raw_material">Matière première</SelectItem>
+                        <SelectItem value="semi_finished">Produit semi-fini</SelectItem>
+                        <SelectItem value="finished">Produit fini</SelectItem>
+                        <SelectItem value="consumable">Consommable</SelectItem>
+                        <SelectItem value="spare_part">Pièce détachée</SelectItem>
                         <SelectItem value="service">Service</SelectItem>
                         <SelectItem value="tax">Taxe</SelectItem>
                       </>
@@ -366,13 +379,27 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         </div>
 
         <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Description du produit..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+        <FormField
           control={form.control}
-          name="description"
+          name="stock_min"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Stock Minimum (alerte)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Description du produit..." {...field} />
+                <Input type="number" step="1" min="0" placeholder="0" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
