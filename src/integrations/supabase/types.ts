@@ -369,6 +369,135 @@ export type Database = {
           },
         ]
       }
+      bill_of_materials: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          total_duration_minutes: number
+          total_estimated_cost: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          total_duration_minutes?: number
+          total_estimated_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          total_duration_minutes?: number
+          total_estimated_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_of_materials_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_of_materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bom_lines: {
+        Row: {
+          bom_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          bom_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          bom_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bom_lines_bom_id_fkey"
+            columns: ["bom_id"]
+            isOneToOne: false
+            referencedRelation: "bill_of_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bom_steps: {
+        Row: {
+          bom_id: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          step_id: string
+          step_order: number
+        }
+        Insert: {
+          bom_id: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          step_id: string
+          step_order?: number
+        }
+        Update: {
+          bom_id?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          step_id?: string
+          step_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bom_steps_bom_id_fkey"
+            columns: ["bom_id"]
+            isOneToOne: false
+            referencedRelation: "bill_of_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_steps_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "production_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -1196,6 +1325,85 @@ export type Database = {
           },
         ]
       }
+      manufacturing_orders: {
+        Row: {
+          actual_cost: number | null
+          actual_duration_minutes: number | null
+          bom_id: string | null
+          company_id: string
+          completion_date: string | null
+          created_at: string
+          id: string
+          launch_date: string
+          number: string
+          product_id: string
+          quantity: number
+          responsible: string | null
+          status: string
+          updated_at: string
+          waste_notes: string | null
+          waste_qty: number | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          actual_duration_minutes?: number | null
+          bom_id?: string | null
+          company_id: string
+          completion_date?: string | null
+          created_at?: string
+          id?: string
+          launch_date?: string
+          number: string
+          product_id: string
+          quantity?: number
+          responsible?: string | null
+          status?: string
+          updated_at?: string
+          waste_notes?: string | null
+          waste_qty?: number | null
+        }
+        Update: {
+          actual_cost?: number | null
+          actual_duration_minutes?: number | null
+          bom_id?: string | null
+          company_id?: string
+          completion_date?: string | null
+          created_at?: string
+          id?: string
+          launch_date?: string
+          number?: string
+          product_id?: string
+          quantity?: number
+          responsible?: string | null
+          status?: string
+          updated_at?: string
+          waste_notes?: string | null
+          waste_qty?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_orders_bom_id_fkey"
+            columns: ["bom_id"]
+            isOneToOne: false
+            referencedRelation: "bill_of_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           account_id: string | null
@@ -1581,6 +1789,59 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_steps: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          labor_hourly_cost: number
+          labor_required: number
+          machine: string | null
+          machine_hourly_cost: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          labor_hourly_cost?: number
+          labor_required?: number
+          machine?: string | null
+          machine_hourly_cost?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          labor_hourly_cost?: number
+          labor_required?: number
+          machine?: string | null
+          machine_hourly_cost?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_steps_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
