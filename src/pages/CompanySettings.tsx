@@ -148,6 +148,8 @@ export default function CompanySettings() {
           rccm: formData.rccm,
           id_nat: formData.id_nat,
           nim: formData.nim,
+          country: formData.country,
+          currency: formData.currency,
         })
         .eq("id", profile.company_id);
 
