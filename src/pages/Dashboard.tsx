@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Users, FileText, Package, DollarSign, BarChart3, ArrowUpDown, MapPin, Layers, ClipboardList, Factory, AlertTriangle, FileText as FileTextAlt, Search } from "lucide-react";
+import { Users, FileText, Package, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
