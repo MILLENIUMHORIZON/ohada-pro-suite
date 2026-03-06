@@ -240,6 +240,23 @@ export default function CompanySettings() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Pays</Label>
+                        <Input id="country" {...register("country")} placeholder="CD" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="currency">Devise</Label>
+                        <Input id="currency" {...register("currency")} placeholder="CDF" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="company_code">Code Entreprise</Label>
+                      <Input id="company_code" {...register("company_code")} disabled className="bg-muted" />
+                      <p className="text-xs text-muted-foreground">Code généré automatiquement</p>
+                    </div>
+
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? "Enregistrement..." : "Enregistrer les modifications"}
                     </Button>
