@@ -5,6 +5,7 @@ import { TrendingUp, Users, FileText, Package, DollarSign, BarChart3, ArrowUpDow
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     revenue: 0,
     customers: 0,
