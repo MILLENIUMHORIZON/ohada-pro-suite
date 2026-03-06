@@ -118,6 +118,43 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Stock & Production Quick Access */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            Stock & Production
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {[
+              { label: "Tableau de bord", icon: BarChart3, tab: "dashboard" },
+              { label: "Articles & Stock", icon: Search, tab: "stock" },
+              { label: "Mouvements", icon: ArrowUpDown, tab: "movements" },
+              { label: "Emplacements", icon: MapPin, tab: "locations" },
+              { label: "Étapes Production", icon: Layers, tab: "steps" },
+              { label: "Nomenclature (BOM)", icon: ClipboardList, tab: "bom" },
+              { label: "Ordres de Fabrication", icon: Factory, tab: "orders" },
+              { label: "Alertes", icon: AlertTriangle, tab: "alerts" },
+              { label: "Rapports", icon: FileTextAlt, tab: "reports" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.tab}
+                  onClick={() => navigate(`/stock?tab=${item.tab}`)}
+                  className="flex items-center gap-2 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-accent"
+                >
+                  <Icon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Recent Activities */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -154,21 +191,21 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
-              <button className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
+              <button onClick={() => navigate("/invoicing")} className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
                 <FileText className="h-5 w-5 text-primary" />
                 <div>
                   <div className="font-medium">Nouvelle Facture</div>
                   <div className="text-xs text-muted-foreground">Créer une facture client</div>
                 </div>
               </button>
-              <button className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
+              <button onClick={() => navigate("/crm")} className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
                 <Users className="h-5 w-5 text-primary" />
                 <div>
                   <div className="font-medium">Nouveau Client</div>
                   <div className="text-xs text-muted-foreground">Ajouter un client</div>
                 </div>
               </button>
-              <button className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
+              <button onClick={() => navigate("/stock?tab=movements")} className="flex items-center gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent">
                 <Package className="h-5 w-5 text-primary" />
                 <div>
                   <div className="font-medium">Mouvement de Stock</div>
