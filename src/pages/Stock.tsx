@@ -20,10 +20,18 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 type TabType = "dashboard" | "stock" | "movements" | "locations" | "steps" | "bom" | "orders" | "alerts" | "reports";
 
 export default function Stock() {
-  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>((searchParams.get("tab") as TabType) || "dashboard");
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab") as TabType;
+    if (tab && ["dashboard","stock","movements","locations","steps","bom","orders","alerts","reports"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const refresh = () => setRefreshKey(k => k + 1);
 
