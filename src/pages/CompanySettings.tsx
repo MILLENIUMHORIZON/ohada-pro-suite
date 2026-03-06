@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { useForm } from "react-hook-form";
-import { Key, Eye, EyeOff, CheckCircle, XCircle, Wallet, Shield } from "lucide-react";
+import { Key, Eye, EyeOff, CheckCircle, XCircle, Wallet, Shield, Globe } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TreasuryAccountSettings } from "@/components/settings/TreasuryAccountSettings";
 import { UserTreasuryAccess } from "@/components/settings/UserTreasuryAccess";
@@ -147,6 +148,8 @@ export default function CompanySettings() {
           rccm: formData.rccm,
           id_nat: formData.id_nat,
           nim: formData.nim,
+          country: formData.country,
+          currency: formData.currency,
         })
         .eq("id", profile.company_id);
 
@@ -237,6 +240,23 @@ export default function CompanySettings() {
                         <Label htmlFor="nim">NIM</Label>
                         <Input id="nim" {...register("nim")} />
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Pays</Label>
+                        <Input id="country" {...register("country")} placeholder="CD" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="currency">Devise</Label>
+                        <Input id="currency" {...register("currency")} placeholder="CDF" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="company_code">Code Entreprise</Label>
+                      <Input id="company_code" {...register("company_code")} disabled className="bg-muted" />
+                      <p className="text-xs text-muted-foreground">Code généré automatiquement</p>
                     </div>
 
                     <Button type="submit" className="w-full" disabled={loading}>
