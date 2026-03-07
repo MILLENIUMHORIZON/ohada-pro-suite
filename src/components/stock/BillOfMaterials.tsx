@@ -47,6 +47,15 @@ export function BillOfMaterials() {
   const [bomLines, setBomLines] = useState<BOMLine[]>([]);
   const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1 });
 
+  // Quick stock entry
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState<{ id: string; name: string } | null>(null);
+  const [stockForm, setStockForm] = useState({ qty: 1, cost: 0 });
+  const [internalLocations, setInternalLocations] = useState<any[]>([]);
+  const [supplierLocations, setSupplierLocations] = useState<any[]>([]);
+  const [stockLocationId, setStockLocationId] = useState("");
+  const [stockFromLocationId, setStockFromLocationId] = useState("");
+
   const [form, setForm] = useState({ product_id: "", quantity: 1 });
 
   useEffect(() => {
