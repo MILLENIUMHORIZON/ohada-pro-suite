@@ -169,8 +169,37 @@ export function BillOfMaterials() {
       await loadBomLines(selectedBom.id);
     }
   };
+  const openQuickStock = (productId: string, productName: string) => {
+    setStockProduct({ id: productId, name: productName });
+    setStockForm({ qty: 1, cost: 0 });
+    setStockLocationId(internalLocations[0]?.id || "");
+    setStockFromLocationId(supplierLocations[0]?.id || "");
+    setStockDialogOpen(true);
+  };
 
-  const productTypeLabel = (type: string) => {
+  const handleQuickStockEntry = async () => {
+    if (!stockProduct || !stockLocationId || !stockFromLocationId) return;
+    try {
+      const { error } = await supabase.from("stock_moves").insert({
+        product_id: stockProduct.id,
+        qty: stockForm.qty,
+        cost: stockForm.cost,
+        from_location_id: stockFromLocationId,
+        to_location_id: stockLocationId,
+        company_id: companyId,
+        move_type: "supplier_in" as any,
+        state: "done" as any,
+        origin: "BOM Quick Entry",
+      } as any);
+      if (error) throw error;
+      toast({ title: "Stock ajouté", description: `${stockForm.qty} unité(s) de ${stockProduct.name} ajoutées au dépôt.` });
+      setStockDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
+  };
+
+
     const labels: Record<string, string> = {
       raw_material: "Matière première",
       semi_finished: "Semi-fini",
