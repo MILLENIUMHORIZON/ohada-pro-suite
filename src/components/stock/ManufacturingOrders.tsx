@@ -144,7 +144,7 @@ export function ManufacturingOrders() {
         .eq("company_id", companyId);
 
       const internalLoc = locations?.find(l => l.type === "internal");
-      const productionLoc = locations?.find(l => l.type === "production");
+      const productionLoc = locations?.find(l => (l.type as string) === "production");
 
       if (!internalLoc) {
         toast({ title: "Erreur", description: "Aucun emplacement interne trouvé.", variant: "destructive" });
