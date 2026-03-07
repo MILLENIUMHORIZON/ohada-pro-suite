@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Eye, Clock, DollarSign, Package, ArrowLeft, X } from "lucide-react";
+import { Plus, Trash2, Eye, Clock, DollarSign, Package, ArrowLeft, X, PackagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Input as FormInput } from "@/components/ui/input";
 
 interface BOM {
   id: string;
