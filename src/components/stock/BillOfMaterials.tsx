@@ -312,6 +312,60 @@ export function BillOfMaterials() {
           )}
         </CardContent>
       </Card>
+
+      {/* Quick Stock Entry Dialog */}
+      <Dialog open={stockDialogOpen} onOpenChange={setStockDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Ajouter du stock : {stockProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Emplacement de destination (dépôt)</Label>
+              <Select value={stockLocationId} onValueChange={setStockLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un dépôt" />
+                </SelectTrigger>
+                <SelectContent>
+                  {internalLocations.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Emplacement source (fournisseur)</Label>
+              <Select value={stockFromLocationId} onValueChange={setStockFromLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {supplierLocations.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Quantité</Label>
+                <Input type="number" min={0.01} step={0.01} value={stockForm.qty} onChange={e => setStockForm(f => ({ ...f, qty: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <Label>Coût unitaire</Label>
+                <Input type="number" min={0} step={0.01} value={stockForm.cost} onChange={e => setStockForm(f => ({ ...f, cost: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleQuickStockEntry} disabled={!stockLocationId || !stockFromLocationId || stockForm.qty <= 0} className="w-full">
+                <PackagePlus className="mr-2 h-4 w-4" />
+                Valider l'entrée en stock
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
     );
   }
 
