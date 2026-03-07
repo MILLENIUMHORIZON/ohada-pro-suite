@@ -70,10 +70,11 @@ export function BillOfMaterials() {
       if (!profile?.company_id) return;
       setCompanyId(profile.company_id);
 
-      const [bomsRes, finishedRes, allRes] = await Promise.all([
+      const [bomsRes, finishedRes, allRes, locationsRes] = await Promise.all([
         (supabase.from("bill_of_materials" as any) as any).select("*, products(name, sku)").eq("company_id", profile.company_id).order("created_at", { ascending: false }),
         supabase.from("products").select("id, name, sku, type").eq("company_id", profile.company_id).in("type", ["finished", "semi_finished"]),
         supabase.from("products").select("id, name, sku, type").eq("company_id", profile.company_id).eq("active", true).order("name"),
+        supabase.from("stock_locations").select("id, name, type").eq("company_id", profile.company_id),
       ]);
 
       if (bomsRes.data) {
@@ -85,6 +86,10 @@ export function BillOfMaterials() {
       }
       setProducts(finishedRes.data || []);
       setAllProducts(allRes.data || []);
+      if (locationsRes.data) {
+        setInternalLocations(locationsRes.data.filter((l: any) => l.type === 'internal'));
+        setSupplierLocations(locationsRes.data.filter((l: any) => l.type === 'supplier'));
+      }
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
