@@ -217,6 +217,7 @@ export function BillOfMaterials() {
     const availableComponents = allProducts.filter(p => p.id !== selectedBom.product_id);
 
     return (
+      <>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
