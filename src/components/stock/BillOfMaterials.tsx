@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Eye, Clock, DollarSign, Package, ArrowLeft, X } from "lucide-react";
+import { Plus, Trash2, Eye, Clock, DollarSign, Package, ArrowLeft, X, PackagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
 
 interface BOM {
   id: string;
@@ -46,6 +47,15 @@ export function BillOfMaterials() {
   const [bomLines, setBomLines] = useState<BOMLine[]>([]);
   const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1 });
 
+  // Quick stock entry
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState<{ id: string; name: string } | null>(null);
+  const [stockForm, setStockForm] = useState({ qty: 1, cost: 0 });
+  const [internalLocations, setInternalLocations] = useState<any[]>([]);
+  const [supplierLocations, setSupplierLocations] = useState<any[]>([]);
+  const [stockLocationId, setStockLocationId] = useState("");
+  const [stockFromLocationId, setStockFromLocationId] = useState("");
+
   const [form, setForm] = useState({ product_id: "", quantity: 1 });
 
   useEffect(() => {
@@ -60,10 +70,11 @@ export function BillOfMaterials() {
       if (!profile?.company_id) return;
       setCompanyId(profile.company_id);
 
-      const [bomsRes, finishedRes, allRes] = await Promise.all([
+      const [bomsRes, finishedRes, allRes, locationsRes] = await Promise.all([
         (supabase.from("bill_of_materials" as any) as any).select("*, products(name, sku)").eq("company_id", profile.company_id).order("created_at", { ascending: false }),
         supabase.from("products").select("id, name, sku, type").eq("company_id", profile.company_id).in("type", ["finished", "semi_finished"]),
         supabase.from("products").select("id, name, sku, type").eq("company_id", profile.company_id).eq("active", true).order("name"),
+        supabase.from("stock_locations").select("id, name, type").eq("company_id", profile.company_id),
       ]);
 
       if (bomsRes.data) {
@@ -75,6 +86,10 @@ export function BillOfMaterials() {
       }
       setProducts(finishedRes.data || []);
       setAllProducts(allRes.data || []);
+      if (locationsRes.data) {
+        setInternalLocations(locationsRes.data.filter((l: any) => l.type === 'internal'));
+        setSupplierLocations(locationsRes.data.filter((l: any) => l.type === 'supplier'));
+      }
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
@@ -154,8 +169,37 @@ export function BillOfMaterials() {
       await loadBomLines(selectedBom.id);
     }
   };
+  const openQuickStock = (productId: string, productName: string) => {
+    setStockProduct({ id: productId, name: productName });
+    setStockForm({ qty: 1, cost: 0 });
+    setStockLocationId(internalLocations[0]?.id || "");
+    setStockFromLocationId(supplierLocations[0]?.id || "");
+    setStockDialogOpen(true);
+  };
 
-  const productTypeLabel = (type: string) => {
+  const handleQuickStockEntry = async () => {
+    if (!stockProduct || !stockLocationId || !stockFromLocationId) return;
+    try {
+      const { error } = await supabase.from("stock_moves").insert({
+        product_id: stockProduct.id,
+        qty: stockForm.qty,
+        cost: stockForm.cost,
+        from_location_id: stockFromLocationId,
+        to_location_id: stockLocationId,
+        company_id: companyId,
+        move_type: "supplier_in" as any,
+        state: "done" as any,
+        origin: "BOM Quick Entry",
+      } as any);
+      if (error) throw error;
+      toast({ title: "Stock ajouté", description: `${stockForm.qty} unité(s) de ${stockProduct.name} ajoutées au dépôt.` });
+      setStockDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
+  };
+
+
     const labels: Record<string, string> = {
       raw_material: "Matière première",
       semi_finished: "Semi-fini",
@@ -173,6 +217,7 @@ export function BillOfMaterials() {
     const availableComponents = allProducts.filter(p => p.id !== selectedBom.product_id);
 
     return (
+      <>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -239,7 +284,7 @@ export function BillOfMaterials() {
                   <TableHead>SKU</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Qté nécessaire</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,9 +297,14 @@ export function BillOfMaterials() {
                     </TableCell>
                     <TableCell className="text-right font-medium">{line.quantity}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)}>
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
+                          <PackagePlus className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -263,6 +313,60 @@ export function BillOfMaterials() {
           )}
         </CardContent>
       </Card>
+
+      {/* Quick Stock Entry Dialog */}
+      <Dialog open={stockDialogOpen} onOpenChange={setStockDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Ajouter du stock : {stockProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Emplacement de destination (dépôt)</Label>
+              <Select value={stockLocationId} onValueChange={setStockLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un dépôt" />
+                </SelectTrigger>
+                <SelectContent>
+                  {internalLocations.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Emplacement source (fournisseur)</Label>
+              <Select value={stockFromLocationId} onValueChange={setStockFromLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {supplierLocations.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Quantité</Label>
+                <Input type="number" min={0.01} step={0.01} value={stockForm.qty} onChange={e => setStockForm(f => ({ ...f, qty: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <Label>Coût unitaire</Label>
+                <Input type="number" min={0} step={0.01} value={stockForm.cost} onChange={e => setStockForm(f => ({ ...f, cost: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleQuickStockEntry} disabled={!stockLocationId || !stockFromLocationId || stockForm.qty <= 0} className="w-full">
+                <PackagePlus className="mr-2 h-4 w-4" />
+                Valider l'entrée en stock
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
     );
   }
 
