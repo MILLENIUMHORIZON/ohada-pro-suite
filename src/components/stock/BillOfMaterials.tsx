@@ -296,9 +296,14 @@ export function BillOfMaterials() {
                     </TableCell>
                     <TableCell className="text-right font-medium">{line.quantity}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)}>
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
+                          <PackagePlus className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
