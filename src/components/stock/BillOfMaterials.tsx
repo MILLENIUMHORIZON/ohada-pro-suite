@@ -283,7 +283,7 @@ export function BillOfMaterials() {
                   <TableHead>SKU</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Qté nécessaire</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
