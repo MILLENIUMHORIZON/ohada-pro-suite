@@ -200,6 +200,7 @@ export function BillOfMaterials() {
   };
 
 
+  const productTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       raw_material: "Matière première",
       semi_finished: "Semi-fini",
