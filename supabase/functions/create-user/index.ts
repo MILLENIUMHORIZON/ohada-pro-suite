@@ -49,15 +49,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get admin's company
+    // Get admin's company and expiration
     const { data: adminProfile } = await supabaseAdmin
       .from('profiles')
-      .select('company_id')
+      .select('company_id, expires_at')
       .eq('user_id', user.id)
       .single()
-
-    console.log('Admin user ID:', user.id)
-    console.log('Admin profile:', adminProfile)
 
     if (!adminProfile?.company_id) {
       return new Response(
@@ -65,8 +62,6 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
-
-    console.log('Using company_id:', adminProfile.company_id)
 
     // Get company name
     const { data: companyData } = await supabaseAdmin
@@ -98,15 +93,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Creating user with metadata:', {
-      full_name,
-      phone: phone || '',
-      company_id: adminProfile.company_id,
-      company_name: companyName,
-      account_type: account_type || 'user'
-    })
-
-    // Create the user - the trigger will handle profile creation and role assignment
+    // Pass admin's expires_at so the new user inherits the same license expiration
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -116,12 +103,10 @@ Deno.serve(async (req) => {
         phone: phone || '',
         company_id: adminProfile.company_id,
         company_name: companyName,
-        account_type: account_type || 'user'
+        account_type: account_type || 'user',
+        expires_at: adminProfile.expires_at || null
       }
     })
-
-    console.log('User created:', newUser?.user?.id)
-    console.log('Create error:', createError)
 
     if (createError) {
       return new Response(
