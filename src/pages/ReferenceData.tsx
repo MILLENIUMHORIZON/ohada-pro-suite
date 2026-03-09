@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -22,57 +22,81 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
 
 export default function ReferenceData() {
   const [taxes, setTaxes] = useState<any[]>([]);
   const [uoms, setUoms] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
-  const [isTaxDialogOpen, setIsTaxDialogOpen] = useState(false);
-  const [isUomDialogOpen, setIsUomDialogOpen] = useState(false);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // Dialog states
+  const [taxDialog, setTaxDialog] = useState<{ open: boolean; item?: any }>({ open: false });
+  const [uomDialog, setUomDialog] = useState<{ open: boolean; item?: any }>({ open: false });
+  const [categoryDialog, setCategoryDialog] = useState<{ open: boolean; item?: any }>({ open: false });
   const [isCurrencyDialogOpen, setIsCurrencyDialogOpen] = useState(false);
 
-  const taxForm = useForm();
-  const uomForm = useForm();
-  const categoryForm = useForm();
-  const currencyForm = useForm();
+  // Form states
+  const [taxName, setTaxName] = useState("");
+  const [taxRate, setTaxRate] = useState("");
+  const [uomName, setUomName] = useState("");
+  const [uomCode, setUomCode] = useState("");
+  const [uomRatio, setUomRatio] = useState("1.0");
+  const [categoryName, setCategoryName] = useState("");
+  const [currencyCode, setCurrencyCode] = useState("");
+  const [currencyName, setCurrencyName] = useState("");
+  const [currencySymbol, setCurrencySymbol] = useState("");
+  const [currencyRate, setCurrencyRate] = useState("1.0");
+  const [currencyIsBase, setCurrencyIsBase] = useState("false");
 
-  const loadTaxes = async () => {
+  const loadCompanyId = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .single();
+    if (profile?.company_id) setCompanyId(profile.company_id);
+  }, []);
+
+  const loadTaxes = useCallback(async () => {
     const { data } = await supabase.from("taxes").select("*").order("name");
     if (data) setTaxes(data);
-  };
+  }, []);
 
-  const loadUoms = async () => {
+  const loadUoms = useCallback(async () => {
     const { data } = await supabase.from("uom").select("*").order("name");
     if (data) setUoms(data);
-  };
+  }, []);
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     const { data } = await supabase.from("product_categories").select("*").order("name");
     if (data) setCategories(data);
-  };
+  }, []);
 
-  const loadCurrencies = async () => {
+  const loadCurrencies = useCallback(async () => {
     const { data } = await supabase.from("currencies").select("*").order("code");
     if (data) setCurrencies(data);
-  };
+  }, []);
 
   useEffect(() => {
-    const initializeReferenceData = async () => {
+    const init = async () => {
+      await loadCompanyId();
       await initializeDefaultCurrencies();
       loadTaxes();
       loadUoms();
       loadCategories();
       loadCurrencies();
     };
-    initializeReferenceData();
+    init();
   }, []);
 
   const initializeDefaultCurrencies = async () => {
     try {
-      const { data: profile } = await supabase.from("profiles").select("company_id").single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("company_id").eq("user_id", user.id).single();
       if (!profile?.company_id) return;
 
       const { data: company } = await supabase
@@ -83,7 +107,6 @@ export default function ReferenceData() {
 
       if (company?.country !== "CD") return;
 
-      // Check if currencies already exist
       const { data: existingCurrencies } = await supabase
         .from("currencies")
         .select("*")
@@ -94,7 +117,6 @@ export default function ReferenceData() {
 
       const currenciesToCreate = [];
 
-      // Create CDF if not exists
       if (!existingCodes.includes("CDF")) {
         currenciesToCreate.push({
           company_id: profile.company_id,
@@ -106,27 +128,21 @@ export default function ReferenceData() {
         });
       }
 
-      // Get DGI rate
-      let usdRate = 2800; // Fallback rate
+      let usdRate = 2800;
       let rateSource = "Fallback";
       let rateDate = null;
 
       try {
-        console.log("Fetching DGI exchange rate...");
-        const { data: dgiData, error: dgiError } = await supabase.functions.invoke("get-dgi-exchange-rate");
-        console.log("DGI response:", dgiData, dgiError);
-        
+        const { data: dgiData } = await supabase.functions.invoke("get-dgi-exchange-rate");
         if (dgiData && dgiData.rate) {
           usdRate = dgiData.rate;
           rateSource = "DGI";
           rateDate = dgiData.date;
-          console.log("Using DGI rate:", usdRate, "Date:", rateDate);
         }
       } catch (error) {
         console.error("Failed to fetch DGI rate:", error);
       }
 
-      // Create or update USD currency
       if (!existingCodes.includes("USD")) {
         currenciesToCreate.push({
           company_id: profile.company_id,
@@ -138,7 +154,6 @@ export default function ReferenceData() {
           last_updated: rateDate || new Date().toISOString(),
         });
       } else if (usdCurrency) {
-        // Always update USD with latest DGI rate for RDC companies
         await supabase
           .from("currencies")
           .update({
@@ -147,16 +162,12 @@ export default function ReferenceData() {
             last_updated: rateDate || new Date().toISOString(),
           })
           .eq("id", usdCurrency.id);
-        console.log("Updated USD currency with DGI rate:", usdRate);
         toast.success(`Taux USD mis à jour: ${usdRate} CDF`);
       }
 
-      // Insert currencies if needed
       if (currenciesToCreate.length > 0) {
         const { error } = await supabase.from("currencies").insert(currenciesToCreate);
-        if (error) {
-          console.error("Error creating default currencies:", error);
-        } else if (rateSource === "DGI") {
+        if (!error && rateSource === "DGI") {
           toast.success(`Taux USD DGI: ${usdRate} CDF`);
         }
       }
@@ -165,75 +176,133 @@ export default function ReferenceData() {
     }
   };
 
-  const handleTaxSubmit = async (formData: any) => {
-    const { data: profile } = await supabase.from("profiles").select("company_id").single();
-    
-    const { error } = await supabase.from("taxes").insert({
-      company_id: profile?.company_id,
-      name: formData.name,
-      rate: parseFloat(formData.rate),
-    });
-
-    if (error) {
-      toast.error("Erreur lors de la création de la taxe");
-    } else {
-      toast.success("Taxe créée avec succès");
-      setIsTaxDialogOpen(false);
-      taxForm.reset();
-      loadTaxes();
-    }
+  // ---- TAX CRUD ----
+  const openTaxDialog = (item?: any) => {
+    setTaxName(item?.name || "");
+    setTaxRate(item?.rate?.toString() || "");
+    setTaxDialog({ open: true, item });
   };
 
-  const handleUomSubmit = async (formData: any) => {
-    const { data: profile } = await supabase.from("profiles").select("company_id").single();
-    
-    const { error } = await supabase.from("uom").insert({
-      company_id: profile?.company_id,
-      name: formData.name,
-      code: formData.code,
-      ratio: formData.ratio ? parseFloat(formData.ratio) : 1.0,
-    });
+  const handleTaxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId) { toast.error("Entreprise non trouvée"); return; }
 
-    if (error) {
-      toast.error("Erreur lors de la création de l'unité");
+    if (taxDialog.item) {
+      const { error } = await supabase.from("taxes").update({
+        name: taxName,
+        rate: parseFloat(taxRate),
+      }).eq("id", taxDialog.item.id);
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Taxe modifiée");
     } else {
-      toast.success("Unité créée avec succès");
-      setIsUomDialogOpen(false);
-      uomForm.reset();
-      loadUoms();
+      const { error } = await supabase.from("taxes").insert({
+        company_id: companyId,
+        name: taxName,
+        rate: parseFloat(taxRate),
+      });
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Taxe créée");
     }
+    setTaxDialog({ open: false });
+    loadTaxes();
   };
 
-  const handleCategorySubmit = async (formData: any) => {
-    const { data: profile } = await supabase.from("profiles").select("company_id").single();
-    
-    const { error } = await supabase.from("product_categories").insert({
-      company_id: profile?.company_id,
-      name: formData.name,
-    });
-
-    if (error) {
-      toast.error("Erreur lors de la création de la catégorie");
-    } else {
-      toast.success("Catégorie créée avec succès");
-      setIsCategoryDialogOpen(false);
-      categoryForm.reset();
-      loadCategories();
-    }
+  const deleteTax = async (id: string) => {
+    const { error } = await supabase.from("taxes").delete().eq("id", id);
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Taxe supprimée");
+    loadTaxes();
   };
 
-  const handleCurrencySubmit = async (formData: any) => {
-    const { data: profile } = await supabase.from("profiles").select("company_id").single();
-    
-    let rate = parseFloat(formData.rate);
+  // ---- UOM CRUD ----
+  const openUomDialog = (item?: any) => {
+    setUomName(item?.name || "");
+    setUomCode(item?.code || "");
+    setUomRatio(item?.ratio?.toString() || "1.0");
+    setUomDialog({ open: true, item });
+  };
+
+  const handleUomSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId) { toast.error("Entreprise non trouvée"); return; }
+
+    if (uomDialog.item) {
+      const { error } = await supabase.from("uom").update({
+        name: uomName,
+        code: uomCode,
+        ratio: parseFloat(uomRatio),
+      }).eq("id", uomDialog.item.id);
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Unité modifiée");
+    } else {
+      const { error } = await supabase.from("uom").insert({
+        company_id: companyId,
+        name: uomName,
+        code: uomCode,
+        ratio: parseFloat(uomRatio),
+      });
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Unité créée");
+    }
+    setUomDialog({ open: false });
+    loadUoms();
+  };
+
+  const deleteUom = async (id: string) => {
+    const { error } = await supabase.from("uom").delete().eq("id", id);
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Unité supprimée");
+    loadUoms();
+  };
+
+  // ---- CATEGORY CRUD ----
+  const openCategoryDialog = (item?: any) => {
+    setCategoryName(item?.name || "");
+    setCategoryDialog({ open: true, item });
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId) { toast.error("Entreprise non trouvée"); return; }
+
+    if (categoryDialog.item) {
+      const { error } = await supabase.from("product_categories").update({
+        name: categoryName,
+      }).eq("id", categoryDialog.item.id);
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Catégorie modifiée");
+    } else {
+      const { error } = await supabase.from("product_categories").insert({
+        company_id: companyId,
+        name: categoryName,
+      });
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Catégorie créée");
+    }
+    setCategoryDialog({ open: false });
+    loadCategories();
+  };
+
+  const deleteCategory = async (id: string) => {
+    const { error } = await supabase.from("product_categories").delete().eq("id", id);
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Catégorie supprimée");
+    loadCategories();
+  };
+
+  // ---- CURRENCY ----
+  const handleCurrencySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId) { toast.error("Entreprise non trouvée"); return; }
+
+    let rate = parseFloat(currencyRate);
     let rateSource = "Manuel";
 
-    // For RDC companies, fetch USD rate from DGI if creating USD currency
-    if (formData.code.toUpperCase() === "USD") {
+    if (currencyCode.toUpperCase() === "USD") {
       const { data: company } = await supabase
         .from("companies")
         .select("country")
-        .eq("id", profile?.company_id)
+        .eq("id", companyId)
         .single();
 
       if (company?.country === "CD") {
@@ -245,29 +314,25 @@ export default function ReferenceData() {
             toast.success(`Taux DGI récupéré: ${rate} CDF`);
           }
         } catch (error) {
-          console.error("Failed to fetch DGI rate:", error);
-          toast.warning("Impossible de récupérer le taux DGI, utilisation du taux manuel");
+          toast.warning("Impossible de récupérer le taux DGI");
         }
       }
     }
-    
+
     const { error } = await supabase.from("currencies").insert({
-      company_id: profile?.company_id,
-      code: formData.code.toUpperCase(),
-      name: `${formData.name} (Source: ${rateSource})`,
-      symbol: formData.symbol,
-      rate: rate,
-      is_base: formData.is_base === "true",
+      company_id: companyId,
+      code: currencyCode.toUpperCase(),
+      name: `${currencyName} (Source: ${rateSource})`,
+      symbol: currencySymbol,
+      rate,
+      is_base: currencyIsBase === "true",
     });
 
-    if (error) {
-      toast.error("Erreur lors de la création de la devise");
-    } else {
-      toast.success("Devise créée avec succès");
-      setIsCurrencyDialogOpen(false);
-      currencyForm.reset();
-      loadCurrencies();
-    }
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Devise créée");
+    setIsCurrencyDialogOpen(false);
+    setCurrencyCode(""); setCurrencyName(""); setCurrencySymbol(""); setCurrencyRate("1.0"); setCurrencyIsBase("false");
+    loadCurrencies();
   };
 
   return (
@@ -285,12 +350,13 @@ export default function ReferenceData() {
           <TabsTrigger value="currencies">Devises</TabsTrigger>
         </TabsList>
 
+        {/* TAXES TAB */}
         <TabsContent value="taxes" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Taxes</CardTitle>
-                <Button onClick={() => setIsTaxDialogOpen(true)}>
+                <Button onClick={() => openTaxDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvelle Taxe
                 </Button>
@@ -302,6 +368,7 @@ export default function ReferenceData() {
                   <TableRow>
                     <TableHead>Nom</TableHead>
                     <TableHead className="text-right">Taux (%)</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -309,6 +376,16 @@ export default function ReferenceData() {
                     <TableRow key={tax.id}>
                       <TableCell>{tax.name}</TableCell>
                       <TableCell className="text-right font-mono">{tax.rate}%</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openTaxDialog(tax)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteTax(tax.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -317,12 +394,13 @@ export default function ReferenceData() {
           </Card>
         </TabsContent>
 
+        {/* UOM TAB */}
         <TabsContent value="uom" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Unités de Mesure</CardTitle>
-                <Button onClick={() => setIsUomDialogOpen(true)}>
+                <Button onClick={() => openUomDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvelle Unité
                 </Button>
@@ -335,6 +413,7 @@ export default function ReferenceData() {
                     <TableHead>Nom</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead className="text-right">Ratio</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -343,6 +422,16 @@ export default function ReferenceData() {
                       <TableCell>{uom.name}</TableCell>
                       <TableCell className="font-mono">{uom.code}</TableCell>
                       <TableCell className="text-right">{uom.ratio}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openUomDialog(uom)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteUom(uom.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -351,12 +440,13 @@ export default function ReferenceData() {
           </Card>
         </TabsContent>
 
+        {/* CATEGORIES TAB */}
         <TabsContent value="categories" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Catégories de Produits</CardTitle>
-                <Button onClick={() => setIsCategoryDialogOpen(true)}>
+                <Button onClick={() => openCategoryDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvelle Catégorie
                 </Button>
@@ -367,12 +457,23 @@ export default function ReferenceData() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => (
                     <TableRow key={category.id}>
                       <TableCell>{category.name}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openCategoryDialog(category)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteCategory(category.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -381,6 +482,7 @@ export default function ReferenceData() {
           </Card>
         </TabsContent>
 
+        {/* CURRENCIES TAB */}
         <TabsContent value="currencies" className="space-y-4">
           <Card>
             <CardHeader>
@@ -419,15 +521,12 @@ export default function ReferenceData() {
                       <TableCell className="font-mono font-semibold">{currency.code}</TableCell>
                       <TableCell>{currency.name}</TableCell>
                       <TableCell className="font-mono">{currency.symbol}</TableCell>
-                      <TableCell className="text-right font-mono">{currency.rate.toFixed(4)}</TableCell>
+                      <TableCell className="text-right font-mono">{currency.rate?.toFixed(4)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {currency.last_updated 
+                        {currency.last_updated
                           ? new Date(currency.last_updated).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
+                              day: '2-digit', month: '2-digit', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
                             })
                           : '-'}
                       </TableCell>
@@ -442,78 +541,72 @@ export default function ReferenceData() {
       </Tabs>
 
       {/* Tax Dialog */}
-      <Dialog open={isTaxDialogOpen} onOpenChange={setIsTaxDialogOpen}>
+      <Dialog open={taxDialog.open} onOpenChange={(open) => !open && setTaxDialog({ open: false })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle Taxe</DialogTitle>
-            <DialogDescription>Créer une nouvelle taxe</DialogDescription>
+            <DialogTitle>{taxDialog.item ? "Modifier la Taxe" : "Nouvelle Taxe"}</DialogTitle>
+            <DialogDescription>{taxDialog.item ? "Modifier cette taxe" : "Créer une nouvelle taxe"}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={taxForm.handleSubmit(handleTaxSubmit)} className="space-y-4">
+          <form onSubmit={handleTaxSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tax-name">Nom</Label>
-              <Input id="tax-name" {...taxForm.register("name")} required />
+              <Label>Nom</Label>
+              <Input value={taxName} onChange={(e) => setTaxName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tax-rate">Taux (%)</Label>
-              <Input id="tax-rate" type="number" step="0.01" {...taxForm.register("rate")} required />
+              <Label>Taux (%)</Label>
+              <Input type="number" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} required />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsTaxDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button type="submit">Créer</Button>
+              <Button type="button" variant="outline" onClick={() => setTaxDialog({ open: false })}>Annuler</Button>
+              <Button type="submit">{taxDialog.item ? "Modifier" : "Créer"}</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* UOM Dialog */}
-      <Dialog open={isUomDialogOpen} onOpenChange={setIsUomDialogOpen}>
+      <Dialog open={uomDialog.open} onOpenChange={(open) => !open && setUomDialog({ open: false })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle Unité de Mesure</DialogTitle>
-            <DialogDescription>Créer une nouvelle unité</DialogDescription>
+            <DialogTitle>{uomDialog.item ? "Modifier l'Unité" : "Nouvelle Unité de Mesure"}</DialogTitle>
+            <DialogDescription>{uomDialog.item ? "Modifier cette unité" : "Créer une nouvelle unité"}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={uomForm.handleSubmit(handleUomSubmit)} className="space-y-4">
+          <form onSubmit={handleUomSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="uom-name">Nom</Label>
-              <Input id="uom-name" {...uomForm.register("name")} required />
+              <Label>Nom</Label>
+              <Input value={uomName} onChange={(e) => setUomName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="uom-code">Code</Label>
-              <Input id="uom-code" {...uomForm.register("code")} required />
+              <Label>Code</Label>
+              <Input value={uomCode} onChange={(e) => setUomCode(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="uom-ratio">Ratio</Label>
-              <Input id="uom-ratio" type="number" step="0.01" defaultValue="1.0" {...uomForm.register("ratio")} />
+              <Label>Ratio</Label>
+              <Input type="number" step="0.01" value={uomRatio} onChange={(e) => setUomRatio(e.target.value)} />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsUomDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button type="submit">Créer</Button>
+              <Button type="button" variant="outline" onClick={() => setUomDialog({ open: false })}>Annuler</Button>
+              <Button type="submit">{uomDialog.item ? "Modifier" : "Créer"}</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Category Dialog */}
-      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+      <Dialog open={categoryDialog.open} onOpenChange={(open) => !open && setCategoryDialog({ open: false })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle Catégorie</DialogTitle>
-            <DialogDescription>Créer une nouvelle catégorie de produit</DialogDescription>
+            <DialogTitle>{categoryDialog.item ? "Modifier la Catégorie" : "Nouvelle Catégorie"}</DialogTitle>
+            <DialogDescription>{categoryDialog.item ? "Modifier cette catégorie" : "Créer une nouvelle catégorie"}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={categoryForm.handleSubmit(handleCategorySubmit)} className="space-y-4">
+          <form onSubmit={handleCategorySubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="category-name">Nom</Label>
-              <Input id="category-name" {...categoryForm.register("name")} required />
+              <Label>Nom</Label>
+              <Input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} required />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button type="submit">Créer</Button>
+              <Button type="button" variant="outline" onClick={() => setCategoryDialog({ open: false })}>Annuler</Button>
+              <Button type="submit">{categoryDialog.item ? "Modifier" : "Créer"}</Button>
             </div>
           </form>
         </DialogContent>
@@ -526,34 +619,32 @@ export default function ReferenceData() {
             <DialogTitle>Nouvelle Devise</DialogTitle>
             <DialogDescription>Créer une nouvelle devise</DialogDescription>
           </DialogHeader>
-          <form onSubmit={currencyForm.handleSubmit(handleCurrencySubmit)} className="space-y-4">
+          <form onSubmit={handleCurrencySubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currency-code">Code (ex: USD, EUR, CDF)</Label>
-              <Input id="currency-code" {...currencyForm.register("code")} required maxLength={3} />
+              <Label>Code (ex: USD, EUR, CDF)</Label>
+              <Input value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} required maxLength={3} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency-name">Nom</Label>
-              <Input id="currency-name" {...currencyForm.register("name")} required />
+              <Label>Nom</Label>
+              <Input value={currencyName} onChange={(e) => setCurrencyName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency-symbol">Symbole (ex: $, €, FC)</Label>
-              <Input id="currency-symbol" {...currencyForm.register("symbol")} required />
+              <Label>Symbole (ex: $, €, FC)</Label>
+              <Input value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency-rate">Taux de Change</Label>
-              <Input id="currency-rate" type="number" step="0.0001" defaultValue="1.0" {...currencyForm.register("rate")} required />
+              <Label>Taux de Change</Label>
+              <Input type="number" step="0.0001" value={currencyRate} onChange={(e) => setCurrencyRate(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency-is-base">Devise de Base</Label>
-              <select id="currency-is-base" {...currencyForm.register("is_base")} className="w-full rounded-md border border-input bg-background px-3 py-2">
+              <Label>Devise de Base</Label>
+              <select value={currencyIsBase} onChange={(e) => setCurrencyIsBase(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2">
                 <option value="false">Non</option>
                 <option value="true">Oui</option>
               </select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsCurrencyDialogOpen(false)}>
-                Annuler
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsCurrencyDialogOpen(false)}>Annuler</Button>
               <Button type="submit">Créer</Button>
             </div>
           </form>
