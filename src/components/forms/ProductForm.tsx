@@ -142,12 +142,19 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
   const onSubmit = async (values: ProductFormValues) => {
     setIsLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Utilisateur non connecté");
+        return;
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
-        .single();
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (!profile) {
+      if (!profile?.company_id) {
         toast.error("Impossible de récupérer les informations utilisateur");
         return;
       }
