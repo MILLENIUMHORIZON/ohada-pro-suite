@@ -2284,6 +2284,38 @@ export type Database = {
           },
         ]
       }
+      step_machines: {
+        Row: {
+          created_at: string
+          hourly_cost: number
+          id: string
+          machine_name: string
+          step_id: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_cost?: number
+          id?: string
+          machine_name: string
+          step_id: string
+        }
+        Update: {
+          created_at?: string
+          hourly_cost?: number
+          id?: string
+          machine_name?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_machines_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "production_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_inventories: {
         Row: {
           company_id: string | null
