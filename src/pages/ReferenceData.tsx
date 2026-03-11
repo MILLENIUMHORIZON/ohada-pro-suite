@@ -233,7 +233,8 @@ export default function ReferenceData() {
         name: uomName,
         code: uomCode,
         ratio: parseFloat(uomRatio),
-      }).eq("id", uomDialog.item.id);
+        uom_type: uomType,
+      } as any).eq("id", uomDialog.item.id);
       if (error) { toast.error("Erreur: " + error.message); return; }
       toast.success("Unité modifiée");
     } else {
@@ -242,7 +243,8 @@ export default function ReferenceData() {
         name: uomName,
         code: uomCode,
         ratio: parseFloat(uomRatio),
-      });
+        uom_type: uomType,
+      } as any);
       if (error) { toast.error("Erreur: " + error.message); return; }
       toast.success("Unité créée");
     }
