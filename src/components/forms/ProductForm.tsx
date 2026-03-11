@@ -289,8 +289,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
           />
         </div>
 
-        {companyCountry !== "CD" && (
-          <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="category_id"
@@ -321,7 +320,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
               name="uom_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Unité de Mesure</FormLabel>
+                  <FormLabel>Unité de Mesure *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -331,7 +330,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
                     <SelectContent>
                       {uoms.map((uom) => (
                         <SelectItem key={uom.id} value={uom.id}>
-                          {uom.name}
+                          {uom.name} ({uom.code || ""})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -341,7 +340,6 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
               )}
             />
           </div>
-        )}
 
         <FormField
           control={form.control}
