@@ -220,6 +220,7 @@ export default function ReferenceData() {
     setUomName(item?.name || "");
     setUomCode(item?.code || "");
     setUomRatio(item?.ratio?.toString() || "1.0");
+    setUomType(item?.uom_type || "quantity");
     setUomDialog({ open: true, item });
   };
 
