@@ -69,6 +69,9 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
       cost_price: "0",
       stock_min: "0",
       description: "",
+      image_url: "",
+      dimensions: "",
+      specifications: "",
       ...defaultValues,
     },
   });
