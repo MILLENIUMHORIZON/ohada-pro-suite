@@ -42,6 +42,7 @@ export default function ReferenceData() {
   const [uomName, setUomName] = useState("");
   const [uomCode, setUomCode] = useState("");
   const [uomRatio, setUomRatio] = useState("1.0");
+  const [uomType, setUomType] = useState("quantity");
   const [categoryName, setCategoryName] = useState("");
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencyName, setCurrencyName] = useState("");
