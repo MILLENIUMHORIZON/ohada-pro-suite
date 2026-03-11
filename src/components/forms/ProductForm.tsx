@@ -36,6 +36,9 @@ const productFormSchema = z.object({
   cost_price: z.string().optional(),
   stock_min: z.string().optional(),
   description: z.string().optional(),
+  image_url: z.string().optional(),
+  dimensions: z.string().optional(),
+  specifications: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
