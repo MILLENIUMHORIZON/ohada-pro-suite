@@ -19,10 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { ImageUpload } from "@/components/stock/ImageUpload";
 
 const productFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis").max(200),
