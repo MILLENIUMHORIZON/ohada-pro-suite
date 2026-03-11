@@ -31,6 +31,8 @@ interface BOMLine {
   product_name?: string;
   product_sku?: string;
   product_type?: string;
+  uom_code?: string;
+  bom_step_id?: string | null;
 }
 
 interface BOMStep {
