@@ -162,7 +162,7 @@ export function BillOfMaterials() {
 
   const loadBomLines = async (bomId: string) => {
     const { data } = await (supabase.from("bom_lines" as any) as any)
-      .select("*, products(name, sku, type)")
+      .select("*, products(name, sku, type, uom:uom(code))")
       .eq("bom_id", bomId)
       .order("created_at");
 
@@ -171,6 +171,8 @@ export function BillOfMaterials() {
       product_name: l.products?.name,
       product_sku: l.products?.sku,
       product_type: l.products?.type,
+      uom_code: l.products?.uom?.code || "unité",
+      bom_step_id: l.bom_step_id,
     })));
   };
 
