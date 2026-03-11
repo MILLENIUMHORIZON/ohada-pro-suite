@@ -578,17 +578,31 @@ export default function ReferenceData() {
             <DialogDescription>{uomDialog.item ? "Modifier cette unité" : "Créer une nouvelle unité"}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUomSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nom</Label>
-              <Input value={uomName} onChange={(e) => setUomName(e.target.value)} required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nom</Label>
+                <Input value={uomName} onChange={(e) => setUomName(e.target.value)} required placeholder="Kilogramme" />
+              </div>
+              <div className="space-y-2">
+                <Label>Code</Label>
+                <Input value={uomCode} onChange={(e) => setUomCode(e.target.value)} required placeholder="kg" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Code</Label>
-              <Input value={uomCode} onChange={(e) => setUomCode(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Ratio</Label>
-              <Input type="number" step="0.01" value={uomRatio} onChange={(e) => setUomRatio(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type d'unité</Label>
+                <select value={uomType} onChange={(e) => setUomType(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="quantity">Quantité</option>
+                  <option value="weight">Poids</option>
+                  <option value="length">Longueur</option>
+                  <option value="volume">Volume</option>
+                  <option value="surface">Surface</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ratio</Label>
+                <Input type="number" step="0.01" value={uomRatio} onChange={(e) => setUomRatio(e.target.value)} />
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setUomDialog({ open: false })}>Annuler</Button>
