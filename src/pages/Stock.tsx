@@ -129,6 +129,7 @@ export default function Stock() {
       {activeTab === "steps" && <ProductionSteps />}
       {activeTab === "bom" && <BillOfMaterials />}
       {activeTab === "orders" && <ManufacturingOrders />}
+      {activeTab === "production" && <ProductionDashboard />}
       {activeTab === "alerts" && <StockAlerts refreshKey={refreshKey} />}
       {activeTab === "reports" && <StockReports />}
 
