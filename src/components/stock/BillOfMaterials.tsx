@@ -523,14 +523,20 @@ export function BillOfMaterials() {
                 productName={selectedBom.product_name || ""}
                 quantity={selectedBom.quantity}
                 totalDuration={totalStepsDuration}
-                steps={bomSteps.map(s => ({
-                  step_order: s.step_order,
-                  step_name: s.step_name || "",
-                  step_code: s.step_code || "",
-                  duration_minutes: s.duration_minutes,
-                  machines: s.machines || [],
-                  labor_required: s.labor_required || 1,
-                }))}
+                steps={bomSteps.map(s => {
+                  const stepMaterials = bomLines
+                    .filter(l => l.bom_step_id === s.id)
+                    .map(l => ({ name: l.product_name || "", quantity: l.quantity, uom: l.uom_code || "unité" }));
+                  return {
+                    step_order: s.step_order,
+                    step_name: s.step_name || "",
+                    step_code: s.step_code || "",
+                    duration_minutes: s.duration_minutes,
+                    machines: s.machines || [],
+                    labor_required: s.labor_required || 1,
+                    materials: stepMaterials,
+                  };
+                })}
               />
             )}
           </CardContent>
