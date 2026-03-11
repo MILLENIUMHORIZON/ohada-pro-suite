@@ -72,7 +72,7 @@ export function BillOfMaterials() {
   const [selectedBom, setSelectedBom] = useState<BOM | null>(null);
   const [bomLines, setBomLines] = useState<BOMLine[]>([]);
   const [bomSteps, setBomSteps] = useState<BOMStep[]>([]);
-  const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1 });
+  const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1, bom_step_id: "" });
   const [addStepForm, setAddStepForm] = useState({ step_id: "", duration_minutes: 0 });
 
   // Quick stock entry
