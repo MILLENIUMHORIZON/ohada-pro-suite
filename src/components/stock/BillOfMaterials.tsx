@@ -362,6 +362,22 @@ export function BillOfMaterials() {
                     <Input type="number" min="0.01" step="0.01" value={addLineForm.quantity}
                       onChange={e => setAddLineForm(f => ({ ...f, quantity: Number(e.target.value) }))} />
                   </div>
+                  {bomSteps.length > 0 && (
+                    <div className="w-48">
+                      <Label className="text-xs">Étape (optionnel)</Label>
+                      <Select value={addLineForm.bom_step_id} onValueChange={v => setAddLineForm(f => ({ ...f, bom_step_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Toutes les étapes" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Toutes les étapes</SelectItem>
+                          {bomSteps.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.step_order}. {s.step_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <Button onClick={addBomLine} disabled={!addLineForm.product_id}>
                     <Plus className="mr-2 h-4 w-4" />Ajouter
                   </Button>
@@ -376,28 +392,43 @@ export function BillOfMaterials() {
                       <TableHead>SKU</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Qté</TableHead>
+                      <TableHead>Unité</TableHead>
+                      {bomSteps.length > 0 && <TableHead>Étape</TableHead>}
                       <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bomLines.map(line => (
-                      <TableRow key={line.id}>
-                        <TableCell className="font-medium">{line.product_name}</TableCell>
-                        <TableCell className="font-mono text-sm">{line.product_sku}</TableCell>
-                        <TableCell><Badge variant="outline">{productTypeLabel(line.product_type || "")}</Badge></TableCell>
-                        <TableCell className="text-right font-medium">{line.quantity}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
-                              <PackagePlus className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {bomLines.map(line => {
+                      const linkedStep = bomSteps.find(s => s.id === line.bom_step_id);
+                      return (
+                        <TableRow key={line.id}>
+                          <TableCell className="font-medium">{line.product_name}</TableCell>
+                          <TableCell className="font-mono text-sm">{line.product_sku}</TableCell>
+                          <TableCell><Badge variant="outline">{productTypeLabel(line.product_type || "")}</Badge></TableCell>
+                          <TableCell className="text-right font-medium">{line.quantity}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">{line.uom_code}</Badge>
+                          </TableCell>
+                          {bomSteps.length > 0 && (
+                            <TableCell>
+                              {linkedStep ? (
+                                <Badge variant="outline" className="text-xs">{linkedStep.step_order}. {linkedStep.step_name}</Badge>
+                              ) : <span className="text-xs text-muted-foreground">Toutes</span>}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
+                                <PackagePlus className="h-4 w-4 text-primary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
