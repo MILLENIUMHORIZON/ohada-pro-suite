@@ -31,6 +31,8 @@ interface BOMLine {
   product_name?: string;
   product_sku?: string;
   product_type?: string;
+  uom_code?: string;
+  bom_step_id?: string | null;
 }
 
 interface BOMStep {
@@ -70,7 +72,7 @@ export function BillOfMaterials() {
   const [selectedBom, setSelectedBom] = useState<BOM | null>(null);
   const [bomLines, setBomLines] = useState<BOMLine[]>([]);
   const [bomSteps, setBomSteps] = useState<BOMStep[]>([]);
-  const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1 });
+  const [addLineForm, setAddLineForm] = useState({ product_id: "", quantity: 1, bom_step_id: "" });
   const [addStepForm, setAddStepForm] = useState({ step_id: "", duration_minutes: 0 });
 
   // Quick stock entry
@@ -160,7 +162,7 @@ export function BillOfMaterials() {
 
   const loadBomLines = async (bomId: string) => {
     const { data } = await (supabase.from("bom_lines" as any) as any)
-      .select("*, products(name, sku, type)")
+      .select("*, products(name, sku, type, uom:uom(code))")
       .eq("bom_id", bomId)
       .order("created_at");
 
@@ -169,6 +171,8 @@ export function BillOfMaterials() {
       product_name: l.products?.name,
       product_sku: l.products?.sku,
       product_type: l.products?.type,
+      uom_code: l.products?.uom?.code || "unité",
+      bom_step_id: l.bom_step_id,
     })));
   };
 
@@ -203,10 +207,11 @@ export function BillOfMaterials() {
         bom_id: selectedBom.id,
         product_id: addLineForm.product_id,
         quantity: addLineForm.quantity,
+        bom_step_id: addLineForm.bom_step_id || null,
       });
       if (error) throw error;
       toast({ title: "Composant ajouté" });
-      setAddLineForm({ product_id: "", quantity: 1 });
+      setAddLineForm({ product_id: "", quantity: 1, bom_step_id: "" });
       await loadBomLines(selectedBom.id);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
@@ -357,6 +362,22 @@ export function BillOfMaterials() {
                     <Input type="number" min="0.01" step="0.01" value={addLineForm.quantity}
                       onChange={e => setAddLineForm(f => ({ ...f, quantity: Number(e.target.value) }))} />
                   </div>
+                  {bomSteps.length > 0 && (
+                    <div className="w-48">
+                      <Label className="text-xs">Étape (optionnel)</Label>
+                      <Select value={addLineForm.bom_step_id} onValueChange={v => setAddLineForm(f => ({ ...f, bom_step_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Toutes les étapes" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Toutes les étapes</SelectItem>
+                          {bomSteps.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.step_order}. {s.step_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <Button onClick={addBomLine} disabled={!addLineForm.product_id}>
                     <Plus className="mr-2 h-4 w-4" />Ajouter
                   </Button>
@@ -371,28 +392,43 @@ export function BillOfMaterials() {
                       <TableHead>SKU</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Qté</TableHead>
+                      <TableHead>Unité</TableHead>
+                      {bomSteps.length > 0 && <TableHead>Étape</TableHead>}
                       <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bomLines.map(line => (
-                      <TableRow key={line.id}>
-                        <TableCell className="font-medium">{line.product_name}</TableCell>
-                        <TableCell className="font-mono text-sm">{line.product_sku}</TableCell>
-                        <TableCell><Badge variant="outline">{productTypeLabel(line.product_type || "")}</Badge></TableCell>
-                        <TableCell className="text-right font-medium">{line.quantity}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
-                              <PackagePlus className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {bomLines.map(line => {
+                      const linkedStep = bomSteps.find(s => s.id === line.bom_step_id);
+                      return (
+                        <TableRow key={line.id}>
+                          <TableCell className="font-medium">{line.product_name}</TableCell>
+                          <TableCell className="font-mono text-sm">{line.product_sku}</TableCell>
+                          <TableCell><Badge variant="outline">{productTypeLabel(line.product_type || "")}</Badge></TableCell>
+                          <TableCell className="text-right font-medium">{line.quantity}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">{line.uom_code}</Badge>
+                          </TableCell>
+                          {bomSteps.length > 0 && (
+                            <TableCell>
+                              {linkedStep ? (
+                                <Badge variant="outline" className="text-xs">{linkedStep.step_order}. {linkedStep.step_name}</Badge>
+                              ) : <span className="text-xs text-muted-foreground">Toutes</span>}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openQuickStock(line.product_id, line.product_name || "")} title="Ajouter du stock">
+                                <PackagePlus className="h-4 w-4 text-primary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => removeBomLine(line.id)} title="Retirer">
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -487,14 +523,20 @@ export function BillOfMaterials() {
                 productName={selectedBom.product_name || ""}
                 quantity={selectedBom.quantity}
                 totalDuration={totalStepsDuration}
-                steps={bomSteps.map(s => ({
-                  step_order: s.step_order,
-                  step_name: s.step_name || "",
-                  step_code: s.step_code || "",
-                  duration_minutes: s.duration_minutes,
-                  machines: s.machines || [],
-                  labor_required: s.labor_required || 1,
-                }))}
+                steps={bomSteps.map(s => {
+                  const stepMaterials = bomLines
+                    .filter(l => l.bom_step_id === s.id)
+                    .map(l => ({ name: l.product_name || "", quantity: l.quantity, uom: l.uom_code || "unité" }));
+                  return {
+                    step_order: s.step_order,
+                    step_name: s.step_name || "",
+                    step_code: s.step_code || "",
+                    duration_minutes: s.duration_minutes,
+                    machines: s.machines || [],
+                    labor_required: s.labor_required || 1,
+                    materials: stepMaterials,
+                  };
+                })}
               />
             )}
           </CardContent>

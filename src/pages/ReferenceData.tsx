@@ -42,6 +42,7 @@ export default function ReferenceData() {
   const [uomName, setUomName] = useState("");
   const [uomCode, setUomCode] = useState("");
   const [uomRatio, setUomRatio] = useState("1.0");
+  const [uomType, setUomType] = useState("quantity");
   const [categoryName, setCategoryName] = useState("");
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencyName, setCurrencyName] = useState("");
@@ -219,6 +220,7 @@ export default function ReferenceData() {
     setUomName(item?.name || "");
     setUomCode(item?.code || "");
     setUomRatio(item?.ratio?.toString() || "1.0");
+    setUomType(item?.uom_type || "quantity");
     setUomDialog({ open: true, item });
   };
 
@@ -231,7 +233,8 @@ export default function ReferenceData() {
         name: uomName,
         code: uomCode,
         ratio: parseFloat(uomRatio),
-      }).eq("id", uomDialog.item.id);
+        uom_type: uomType,
+      } as any).eq("id", uomDialog.item.id);
       if (error) { toast.error("Erreur: " + error.message); return; }
       toast.success("Unité modifiée");
     } else {
@@ -240,7 +243,8 @@ export default function ReferenceData() {
         name: uomName,
         code: uomCode,
         ratio: parseFloat(uomRatio),
-      });
+        uom_type: uomType,
+      } as any);
       if (error) { toast.error("Erreur: " + error.message); return; }
       toast.success("Unité créée");
     }
@@ -412,6 +416,7 @@ export default function ReferenceData() {
                   <TableRow>
                     <TableHead>Nom</TableHead>
                     <TableHead>Code</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead className="text-right">Ratio</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
@@ -421,6 +426,7 @@ export default function ReferenceData() {
                     <TableRow key={uom.id}>
                       <TableCell>{uom.name}</TableCell>
                       <TableCell className="font-mono">{uom.code}</TableCell>
+                      <TableCell className="capitalize">{(uom as any).uom_type || "quantité"}</TableCell>
                       <TableCell className="text-right">{uom.ratio}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -572,17 +578,31 @@ export default function ReferenceData() {
             <DialogDescription>{uomDialog.item ? "Modifier cette unité" : "Créer une nouvelle unité"}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUomSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nom</Label>
-              <Input value={uomName} onChange={(e) => setUomName(e.target.value)} required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nom</Label>
+                <Input value={uomName} onChange={(e) => setUomName(e.target.value)} required placeholder="Kilogramme" />
+              </div>
+              <div className="space-y-2">
+                <Label>Code</Label>
+                <Input value={uomCode} onChange={(e) => setUomCode(e.target.value)} required placeholder="kg" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Code</Label>
-              <Input value={uomCode} onChange={(e) => setUomCode(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Ratio</Label>
-              <Input type="number" step="0.01" value={uomRatio} onChange={(e) => setUomRatio(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type d'unité</Label>
+                <select value={uomType} onChange={(e) => setUomType(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="quantity">Quantité</option>
+                  <option value="weight">Poids</option>
+                  <option value="length">Longueur</option>
+                  <option value="volume">Volume</option>
+                  <option value="surface">Surface</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ratio</Label>
+                <Input type="number" step="0.01" value={uomRatio} onChange={(e) => setUomRatio(e.target.value)} />
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setUomDialog({ open: false })}>Annuler</Button>

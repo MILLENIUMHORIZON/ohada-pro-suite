@@ -19,10 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { ImageUpload } from "@/components/stock/ImageUpload";
 
 const productFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis").max(200),
@@ -36,6 +36,9 @@ const productFormSchema = z.object({
   cost_price: z.string().optional(),
   stock_min: z.string().optional(),
   description: z.string().optional(),
+  image_url: z.string().optional(),
+  dimensions: z.string().optional(),
+  specifications: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -66,6 +69,9 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
       cost_price: "0",
       stock_min: "0",
       description: "",
+      image_url: "",
+      dimensions: "",
+      specifications: "",
       ...defaultValues,
     },
   });
@@ -175,8 +181,11 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         cost_price: parseFloat(values.cost_price || "0"),
         stock_min: parseFloat(values.stock_min || "0"),
         description: values.description || null,
+        image_url: values.image_url || null,
+        dimensions: values.dimensions || null,
+        specifications: values.specifications || null,
         company_id: profile.company_id,
-      }]);
+      }] as any);
 
       if (error) throw error;
 
@@ -280,8 +289,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
           />
         </div>
 
-        {companyCountry !== "CD" && (
-          <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="category_id"
@@ -312,7 +320,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
               name="uom_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Unité de Mesure</FormLabel>
+                  <FormLabel>Unité de Mesure *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -322,7 +330,7 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
                     <SelectContent>
                       {uoms.map((uom) => (
                         <SelectItem key={uom.id} value={uom.id}>
-                          {uom.name}
+                          {uom.name} ({uom.code || ""})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -332,7 +340,6 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
               )}
             />
           </div>
-        )}
 
         <FormField
           control={form.control}
@@ -416,6 +423,46 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Image du produit */}
+        <div className="space-y-2">
+          <FormLabel>Image du produit</FormLabel>
+          <ImageUpload
+            folder="products"
+            currentUrl={form.getValues("image_url") || null}
+            onUploaded={(url) => form.setValue("image_url", url)}
+            onRemoved={() => form.setValue("image_url", "")}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="dimensions"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dimensions</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: 100x50x20 cm" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="specifications"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Spécifications</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Acier inoxydable" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading}>
