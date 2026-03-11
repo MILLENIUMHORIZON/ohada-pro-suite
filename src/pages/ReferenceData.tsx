@@ -416,6 +416,7 @@ export default function ReferenceData() {
                   <TableRow>
                     <TableHead>Nom</TableHead>
                     <TableHead>Code</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead className="text-right">Ratio</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
@@ -425,6 +426,7 @@ export default function ReferenceData() {
                     <TableRow key={uom.id}>
                       <TableCell>{uom.name}</TableCell>
                       <TableCell className="font-mono">{uom.code}</TableCell>
+                      <TableCell className="capitalize">{(uom as any).uom_type || "quantité"}</TableCell>
                       <TableCell className="text-right">{uom.ratio}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
