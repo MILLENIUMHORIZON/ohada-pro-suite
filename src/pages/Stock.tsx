@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowUpDown, Search, MapPin, BarChart3, AlertTriangle, Layers, ClipboardList, Factory, FileText, ScrollText } from "lucide-react";
+import { Plus, ArrowUpDown, Search, MapPin, BarChart3, AlertTriangle, Layers, ClipboardList, Factory, FileText, Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/forms/ProductForm";
 import { StockDashboard } from "@/components/stock/StockDashboard";
@@ -15,9 +15,10 @@ import { BillOfMaterials } from "@/components/stock/BillOfMaterials";
 import { ManufacturingOrders } from "@/components/stock/ManufacturingOrders";
 import { StockAlerts } from "@/components/stock/StockAlerts";
 import { StockReports } from "@/components/stock/StockReports";
+import { ProductionDashboard } from "@/components/stock/ProductionDashboard";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-type TabType = "dashboard" | "stock" | "movements" | "locations" | "steps" | "bom" | "orders" | "alerts" | "reports";
+type TabType = "dashboard" | "stock" | "movements" | "locations" | "steps" | "bom" | "orders" | "production" | "alerts" | "reports";
 
 export default function Stock() {
   const [searchParams] = useSearchParams();
@@ -28,7 +29,7 @@ export default function Stock() {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as TabType;
-    if (tab && ["dashboard","stock","movements","locations","steps","bom","orders","alerts","reports"].includes(tab)) {
+    if (tab && ["dashboard","stock","movements","locations","steps","bom","orders","production","alerts","reports"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -43,6 +44,7 @@ export default function Stock() {
     { key: "steps", label: "Étapes Production", icon: Layers },
     { key: "bom", label: "Nomenclature (BOM)", icon: ClipboardList },
     { key: "orders", label: "Ordres de Fabrication", icon: Factory },
+    { key: "production", label: "Suivi Production", icon: Activity },
     { key: "alerts", label: "Alertes", icon: AlertTriangle },
     { key: "reports", label: "Rapports", icon: FileText },
   ];
