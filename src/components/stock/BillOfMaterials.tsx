@@ -207,10 +207,11 @@ export function BillOfMaterials() {
         bom_id: selectedBom.id,
         product_id: addLineForm.product_id,
         quantity: addLineForm.quantity,
+        bom_step_id: addLineForm.bom_step_id || null,
       });
       if (error) throw error;
       toast({ title: "Composant ajouté" });
-      setAddLineForm({ product_id: "", quantity: 1 });
+      setAddLineForm({ product_id: "", quantity: 1, bom_step_id: "" });
       await loadBomLines(selectedBom.id);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
