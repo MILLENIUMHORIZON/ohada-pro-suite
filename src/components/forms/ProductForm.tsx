@@ -424,6 +424,46 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
           )}
         />
 
+        {/* Image du produit */}
+        <div className="space-y-2">
+          <FormLabel>Image du produit</FormLabel>
+          <ImageUpload
+            folder="products"
+            currentUrl={form.getValues("image_url") || null}
+            onUploaded={(url) => form.setValue("image_url", url)}
+            onRemoved={() => form.setValue("image_url", "")}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="dimensions"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dimensions</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: 100x50x20 cm" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="specifications"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Spécifications</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Acier inoxydable" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Création..." : "Créer le produit"}
