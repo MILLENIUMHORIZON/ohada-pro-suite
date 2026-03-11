@@ -420,6 +420,7 @@ export type Database = {
       bom_lines: {
         Row: {
           bom_id: string
+          bom_step_id: string | null
           created_at: string
           id: string
           product_id: string
@@ -427,6 +428,7 @@ export type Database = {
         }
         Insert: {
           bom_id: string
+          bom_step_id?: string | null
           created_at?: string
           id?: string
           product_id: string
@@ -434,6 +436,7 @@ export type Database = {
         }
         Update: {
           bom_id?: string
+          bom_step_id?: string | null
           created_at?: string
           id?: string
           product_id?: string
@@ -445,6 +448,13 @@ export type Database = {
             columns: ["bom_id"]
             isOneToOne: false
             referencedRelation: "bill_of_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_lines_bom_step_id_fkey"
+            columns: ["bom_step_id"]
+            isOneToOne: false
+            referencedRelation: "bom_steps"
             referencedColumns: ["id"]
           },
           {
@@ -1325,6 +1335,140 @@ export type Database = {
           },
         ]
       }
+      manufacturing_order_consumptions: {
+        Row: {
+          consumed_at: string
+          consumed_by: string | null
+          cost: number
+          id: string
+          order_id: string
+          order_step_id: string | null
+          product_id: string
+          quantity: number
+          stock_move_id: string | null
+        }
+        Insert: {
+          consumed_at?: string
+          consumed_by?: string | null
+          cost?: number
+          id?: string
+          order_id: string
+          order_step_id?: string | null
+          product_id: string
+          quantity?: number
+          stock_move_id?: string | null
+        }
+        Update: {
+          consumed_at?: string
+          consumed_by?: string | null
+          cost?: number
+          id?: string
+          order_id?: string
+          order_step_id?: string | null
+          product_id?: string
+          quantity?: number
+          stock_move_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_consumptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_consumptions_order_step_id_fkey"
+            columns: ["order_step_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_order_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_consumptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_consumptions_stock_move_id_fkey"
+            columns: ["stock_move_id"]
+            isOneToOne: false
+            referencedRelation: "stock_moves"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_order_steps: {
+        Row: {
+          actual_duration_minutes: number | null
+          bom_step_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          notes: string | null
+          order_id: string
+          started_at: string | null
+          started_by: string | null
+          status: string
+          step_code: string | null
+          step_name: string
+          step_order: number
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          bom_step_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          order_id: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          step_code?: string | null
+          step_name: string
+          step_order?: number
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          bom_step_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          order_id?: string
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          step_code?: string | null
+          step_name?: string
+          step_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_order_steps_bom_step_id_fkey"
+            columns: ["bom_step_id"]
+            isOneToOne: false
+            referencedRelation: "bom_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manufacturing_order_steps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturing_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manufacturing_orders: {
         Row: {
           actual_cost: number | null
@@ -1856,11 +2000,14 @@ export type Database = {
           created_at: string | null
           currency: string | null
           description: string | null
+          dimensions: string | null
           id: string
+          image_url: string | null
           main_supplier_id: string | null
           name: string
           product_type_code: string | null
           sku: string
+          specifications: string | null
           stock_min: number
           storage_location_id: string | null
           tax_id: string | null
@@ -1878,11 +2025,14 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           description?: string | null
+          dimensions?: string | null
           id?: string
+          image_url?: string | null
           main_supplier_id?: string | null
           name: string
           product_type_code?: string | null
           sku: string
+          specifications?: string | null
           stock_min?: number
           storage_location_id?: string | null
           tax_id?: string | null
@@ -1900,11 +2050,14 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           description?: string | null
+          dimensions?: string | null
           id?: string
+          image_url?: string | null
           main_supplier_id?: string | null
           name?: string
           product_type_code?: string | null
           sku?: string
+          specifications?: string | null
           stock_min?: number
           storage_location_id?: string | null
           tax_id?: string | null
@@ -2287,24 +2440,33 @@ export type Database = {
       step_machines: {
         Row: {
           created_at: string
+          description: string | null
           hourly_cost: number
           id: string
+          image_url: string | null
           machine_name: string
           step_id: string
+          workshop: string | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
           hourly_cost?: number
           id?: string
+          image_url?: string | null
           machine_name: string
           step_id: string
+          workshop?: string | null
         }
         Update: {
           created_at?: string
+          description?: string | null
           hourly_cost?: number
           id?: string
+          image_url?: string | null
           machine_name?: string
           step_id?: string
+          workshop?: string | null
         }
         Relationships: [
           {
@@ -2729,6 +2891,7 @@ export type Database = {
           id: string
           name: string
           ratio: number | null
+          uom_type: string | null
         }
         Insert: {
           code: string
@@ -2737,6 +2900,7 @@ export type Database = {
           id?: string
           name: string
           ratio?: number | null
+          uom_type?: string | null
         }
         Update: {
           code?: string
@@ -2745,6 +2909,7 @@ export type Database = {
           id?: string
           name?: string
           ratio?: number | null
+          uom_type?: string | null
         }
         Relationships: [
           {
