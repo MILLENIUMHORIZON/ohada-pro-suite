@@ -181,8 +181,11 @@ export function ProductForm({ onSuccess, defaultValues }: ProductFormProps) {
         cost_price: parseFloat(values.cost_price || "0"),
         stock_min: parseFloat(values.stock_min || "0"),
         description: values.description || null,
+        image_url: values.image_url || null,
+        dimensions: values.dimensions || null,
+        specifications: values.specifications || null,
         company_id: profile.company_id,
-      }]);
+      }] as any);
 
       if (error) throw error;
 
